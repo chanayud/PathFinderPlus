@@ -7,42 +7,69 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <fragment
+        android:id="@+id/autocomplete_fragment"
+        android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:hint="Enter an address"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/addressListLayoutID"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/autocomplete_fragment"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Add your dynamic list items here -->
+
+    </LinearLayout>
+
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-
-        <fragment
-            android:id="@+id/autocomplete_fragment"
-            android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/white"
-            android:hint="Enter an address"
-            android:textColor="@color/black"
-            android:textSize="16sp" />
-
-        <LinearLayout
-            android:id="@+id/addressListLayoutID"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center">
-
-        </LinearLayout>
-
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="bottom"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <Button
             android:id="@+id/saveAddressButtonID"
-            android:layout_width="wrap_content"
+            android:layout_width="150dp"
             android:layout_height="wrap_content"
-            android:text="Add Address" />
+            android:layout_marginStart="130dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="100dp"
+            android:layout_marginBottom="16dp"
+            android:text="הוסף כתובת"
+            android:backgroundTint="@color/red"
+            android:textColor="#FFFFFF"
+            app:cornerRadius="5dp" />
 
         <Button
             android:id="@+id/giveMeRouteButtonID"
-            android:layout_width="wrap_content"
+            android:layout_width="150dp"
             android:layout_height="wrap_content"
-            android:text="Give Me Route!" />
+            android:layout_marginStart="130dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="100dp"
+            android:layout_marginBottom="16dp"
+            android:backgroundTint="@color/light_gray"
+            android:text="צור מסלול"
+            android:enabled="false"
+            android:textColor="#FFFFFF"
+            app:cornerRadius="5dp" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

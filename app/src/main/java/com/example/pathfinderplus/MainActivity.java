@@ -1,5 +1,7 @@
 package com.example.pathfinderplus;
 
+import static com.example.pathfinderplus.R.id.addressListLayoutID;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
@@ -37,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
    private
    String chosenAddress;
     Button addAddressButton;
+    Button giveRouteButton;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MainActivity", "Im here ");
         addressListLayout = findViewById(R.id.addressListLayoutID);
         addAddressButton = findViewById(R.id.saveAddressButtonID);
+        giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
         coordinatesArray = new ArrayList<>();
 
 
@@ -62,23 +66,55 @@ public class MainActivity extends AppCompatActivity {
         addAddressButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                LinearLayout addressLayout = new LinearLayout(MainActivity.this);
+                addressLayout.setOrientation(LinearLayout.HORIZONTAL);
+                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                addressLayout.setLayoutParams(layoutParams);
+
                 TextView textView = new TextView(MainActivity.this);
-                if(chosenAddress!=null) {
+                if (chosenAddress != null) {
                     textView.setText(chosenAddress);
                     textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
                     textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
                     textView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, android.R.color.white));
                     textView.setPadding(16, 16, 16, 16);
-                    textView.setTextDirection(textView.TEXT_DIRECTION_RTL);
-
+                    textView.setTextDirection(View.TEXT_DIRECTION_RTL);
                 }
 
+                Button deleteButton = new Button(MainActivity.this);
+                LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                deleteButton.setLayoutParams(buttonLayoutParams);
+                deleteButton.setBackgroundResource(R.drawable.ic_trash_can);
+
+                deleteButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        addressListLayout.removeView(addressLayout);
+                        if(addressListLayout.getChildCount() == 0){
+                            giveRouteButton.setBackgroundColor(0xCCCCCC);
+                            giveRouteButton.setEnabled(false);
+                        }
+                    }
+                });
+
+                addressLayout.addView(deleteButton);
+                addressLayout.addView(textView);
 
 
-                addressListLayout.addView(textView);
+                addressListLayout.addView(addressLayout);
 
+                if (addressListLayout.getChildCount() != 0) {
+                    giveRouteButton.setBackgroundColor(0xFFFF0000);
+                    giveRouteButton.setEnabled(true);
+                    Log.d("TAG", "tehilaaaaaaaaa");
+                }
             }
         });
+
 
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
 
