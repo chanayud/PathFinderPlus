@@ -82,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
                     textView.setPadding(16, 16, 16, 16);
                     textView.setTextDirection(View.TEXT_DIRECTION_RTL);
                 }
-//tttttt
+
                 Button deleteButton = new Button(MainActivity.this);
                 LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
