@@ -3,6 +3,8 @@ package com.example.pathfinderplus;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.google.android.gms.maps.model.LatLng;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -14,6 +16,14 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class GetDistanceTask extends AsyncTask<String, Void, String> {
+    private DistanceCallback distanceCallback;
+    public interface DistanceCallback {
+        void onDistanceCalculated(Distance distance);
+        void onDistanceCalculationFailed(String errorMessage);
+    }
+    public void setDistanceCallback(DistanceCallback callback) {
+        distanceCallback = callback;
+    }
     private static final String TAG = "GetDistanceTask";
     private static final String API_KEY = "AIzaSyAXFwrx6mtQFOfHyTy6umAPjf5GJrAIY0A";
 
@@ -76,15 +86,25 @@ public class GetDistanceTask extends AsyncTask<String, Void, String> {
 
                     int durationSeconds = duration.getInt("value");
                     Log.d("MYLOG", "Duration in seconds: " + durationSeconds);
-                } else {
-                    Log.e(TAG, "Directions API error: " + status);
+                    Distance distance = new Distance();
+                    distance.setOrigin(new LatLng(originLat,originLng));
+                    distance.setDestination(new LatLng(destLat,destLng));
+                    distance.setDistance(durationSeconds);
+                    if (distanceCallback != null) {
+                        distanceCallback.onDistanceCalculated(distance);
+                    }
                 }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        } else {
-            Log.e(TAG, "Response is null.");
-        }
+            }catch (JSONException e) {
+                    if (distanceCallback != null) {
+                        distanceCallback.onDistanceCalculationFailed("Invalid response format");
+                    }
+                }
+                } else {
+                    Log.e(TAG, "Directions API error: ");
+                }
+
+
+
     }
 
 

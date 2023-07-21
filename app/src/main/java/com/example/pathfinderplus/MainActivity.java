@@ -29,13 +29,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity  implements GetDistanceTask.DistanceCallback
+{
 
     private LinearLayout addressListLayout;
    private double longitude;
    private double latitude;
    private LatLng latLng;
-   private ArrayList<ArrayList<Double>> coordinatesArray;
+   private ArrayList<LatLng> coordinatesArray;
+   private ArrayList<Distance> distanceArray;
+   private  DistanceCalculator distanceCalculator;
    private
    String chosenAddress;
     Button addAddressButton;
@@ -49,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
         addAddressButton = findViewById(R.id.saveAddressButtonID);
         giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
         coordinatesArray = new ArrayList<>();
-
-
+        distanceArray = new ArrayList<>();
+        distanceCalculator = new DistanceCalculator();
 
         if (!Places.isInitialized()) {
             Places.initialize(getApplicationContext(), "AIzaSyA_oc0Ffut9TNjwgZUUqANMRvQZDbnERPM");
@@ -132,7 +135,29 @@ public class MainActivity extends AppCompatActivity {
             }
 
         });
+        giveRouteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
 
+                // Iterate over each element in the coordinatesArray
+                for (int i = 0; i < coordinatesArray.size(); i++) {
+                    LatLng coordinate1 = coordinatesArray.get(i);
+
+                    // Iterate over the remaining elements starting from the next index
+                    for (int j = i + 1; j < coordinatesArray.size(); j++) {
+                        LatLng coordinate2 = coordinatesArray.get(j);
+                        Log.d("MYLOG", "onClick: pppppppppppppp");
+
+                      //  DistanceCalculator distanceCalculator = new DistanceCalculator();
+                        // GetDistanceTask getDistanceTask = new GetDistanceTask();
+                      //  getDistanceTask.setDistanceCallback(distanceCalculator); // Assuming DistanceCalculator implements the DistanceCallback interface
+                        distanceCalculator.calculateDistance("גן רחל, HaRav Bloch 7, Kiryat Ye'arim", "סיירת גולני 24, ירושלים", MainActivity.this);
+                      //  getDistanceTask.execute("גן רחל, HaRav Bloch 7, Kiryat Ye'arim", "סיירת גולני 24, ירושלים");
+
+                    }
+                }
+            }
+        });
 
 
     }
@@ -151,12 +176,13 @@ public class MainActivity extends AppCompatActivity {
                 Address location = addresses.get(0);
 
                 // Get the latitude and longitude
-                double latitude = location.getLatitude();
-                double longitude = location.getLongitude();
-                ArrayList<Double> addressCoordinates = new ArrayList<>();
-                addressCoordinates.add(latitude);
-                addressCoordinates.add(longitude);
-                coordinatesArray.add(addressCoordinates);
+                LatLng coordinates = new LatLng(location.getLatitude(),location.getLongitude());
+                //double latitude = location.getLatitude();
+                //double longitude = location.getLongitude();
+                //ArrayList<Double> addressCoordinates = new ArrayList<>();
+                //addressCoordinates.add(latitude);
+               // addressCoordinates.add(longitude);
+                coordinatesArray.add(coordinates);
 
 
                 // Do something with the coordinates
@@ -170,4 +196,14 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    public void onDistanceCalculated(Distance distance) {
+            distanceArray.add(distance);
+        Log.d("MYLOG", "onDistanceCalculated: " +  distance.getDistance());
+    }
+
+    @Override
+    public void onDistanceCalculationFailed(String errorMessage) {
+
+    }
 }
