@@ -6,8 +6,10 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import android.content.Intent;
 import android.location.Address;
 import android.location.Geocoder;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -36,13 +38,17 @@ public class MainActivity extends AppCompatActivity  implements GetDistanceTask.
    private double longitude;
    private double latitude;
    private LatLng latLng;
-   private ArrayList<LatLng> coordinatesArray;
+   private ArrayList<String> addressesArray;
    private ArrayList<Distance> distanceArray;
    private  DistanceCalculator distanceCalculator;
    private
    String chosenAddress;
     Button addAddressButton;
     Button giveRouteButton;
+    private static final String API_KEY = "AIzaSyAXFwrx6mtQFOfHyTy6umAPjf5GJrAIY0A";
+    int expectedApiCalls;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,7 +57,7 @@ public class MainActivity extends AppCompatActivity  implements GetDistanceTask.
         addressListLayout = findViewById(R.id.addressListLayoutID);
         addAddressButton = findViewById(R.id.saveAddressButtonID);
         giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
-        coordinatesArray = new ArrayList<>();
+        addressesArray = new ArrayList<>();
         distanceArray = new ArrayList<>();
         distanceCalculator = new DistanceCalculator();
 
@@ -77,7 +83,7 @@ public class MainActivity extends AppCompatActivity  implements GetDistanceTask.
                 addressLayout.setLayoutParams(layoutParams);
 
                 TextView textView = new TextView(MainActivity.this);
-                if (chosenAddress != null) {
+                if (chosenAddress != "" && chosenAddress != null) {
                     textView.setText(chosenAddress);
                     textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
                     textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
@@ -106,6 +112,7 @@ public class MainActivity extends AppCompatActivity  implements GetDistanceTask.
 
                 addressLayout.addView(deleteButton);
                 addressLayout.addView(textView);
+                addressesArray.add(chosenAddress);
 
 
                 addressListLayout.addView(addressLayout);
@@ -129,7 +136,8 @@ public class MainActivity extends AppCompatActivity  implements GetDistanceTask.
 
             public void onPlaceSelected(@NonNull Place place) {
                 chosenAddress = place.getAddress();
-                saveTheCoordinates(chosenAddress);
+
+              //  saveTheCoordinates(chosenAddress);
 
 
             }
@@ -138,21 +146,25 @@ public class MainActivity extends AppCompatActivity  implements GetDistanceTask.
         giveRouteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                distanceArray.clear();
+                int totalAddresses = addressesArray.size();
+                expectedApiCalls = factorial(totalAddresses) / (factorial(2) * factorial(totalAddresses - 2));
 
                 // Iterate over each element in the coordinatesArray
-                for (int i = 0; i < coordinatesArray.size(); i++) {
-                    LatLng coordinate1 = coordinatesArray.get(i);
+                for (int i = 0; i < addressesArray.size(); i++) {
+                //    LatLng coordinate1 = coordinatesArray.get(i);
+                        String address1 = addressesArray.get(i);
+
 
                     // Iterate over the remaining elements starting from the next index
-                    for (int j = i + 1; j < coordinatesArray.size(); j++) {
-                        LatLng coordinate2 = coordinatesArray.get(j);
+                    for (int j = i + 1; j < addressesArray.size(); j++) {
+                        String address2 = addressesArray.get(j);
                         Log.d("MYLOG", "onClick: pppppppppppppp");
 
                       //  DistanceCalculator distanceCalculator = new DistanceCalculator();
                         // GetDistanceTask getDistanceTask = new GetDistanceTask();
                       //  getDistanceTask.setDistanceCallback(distanceCalculator); // Assuming DistanceCalculator implements the DistanceCallback interface
-                        distanceCalculator.calculateDistance("גן רחל, HaRav Bloch 7, Kiryat Ye'arim", "סיירת גולני 24, ירושלים", MainActivity.this);
-                      //  getDistanceTask.execute("גן רחל, HaRav Bloch 7, Kiryat Ye'arim", "סיירת גולני 24, ירושלים");
+                        distanceCalculator.calculateDistance(address1, address2,expectedApiCalls, MainActivity.this);
 
                     }
                 }
@@ -182,7 +194,8 @@ public class MainActivity extends AppCompatActivity  implements GetDistanceTask.
                 //ArrayList<Double> addressCoordinates = new ArrayList<>();
                 //addressCoordinates.add(latitude);
                // addressCoordinates.add(longitude);
-                coordinatesArray.add(coordinates);
+                addressesArray.add(chosenAddress);
+
 
 
                 // Do something with the coordinates
@@ -199,8 +212,41 @@ public class MainActivity extends AppCompatActivity  implements GetDistanceTask.
     @Override
     public void onDistanceCalculated(Distance distance) {
             distanceArray.add(distance);
-        Log.d("MYLOG", "onDistanceCalculated: " +  distance.getDistance());
+        if (distanceArray.size() == expectedApiCalls) {
+            // Process the responses here
+            // The distanceArray should contain all the responses now
+            for (int i = 0; i < distanceArray.size(); i++) {
+                // Do something with distanceArray.get(i) to process each response
+                Log.d("MYLOG", "Origin Address: " + distanceArray.get(i).getOriginAddress());
+                Log.d("MYLOG", "Destination Address: " + distanceArray.get(i).getDestinationAddress());
+                Log.d("MYLOG", "Distance: " + distanceArray.get(i).getDistance());
+
+            }
+            startNavigation(distanceArray.get(0).getOrigin().toString(), distanceArray.get(0).getDestination().toString());
+
+        }
     }
+
+    public void startNavigation(String origin, String destination) {
+        // if (currentDestinationIndex < DESTINATIONS.length) {
+        // String origin = (currentDestinationIndex == 0) ? "current_location" : DESTINATIONS[currentDestinationIndex - 1];
+        //    String destination = DESTINATIONS[currentDestinationIndex];
+        //   currentDestinationIndex++;
+
+        String navigationUrl = "https://www.google.com/maps/dir/?api=1&origin=" + origin + "&destination=" + destination + "&travelmode=driving&key=" + API_KEY;
+
+        // Open Google Maps with the navigation URL
+        Intent intent = new Intent(android.content.Intent.ACTION_VIEW, Uri.parse(navigationUrl));
+        startActivity(intent);
+    }
+
+            private int factorial(int n) {
+        if (n <= 1) {
+            return 1;
+        }
+        return n * factorial(n - 1);
+    }
+
 
     @Override
     public void onDistanceCalculationFailed(String errorMessage) {

@@ -6,6 +6,25 @@ public class Distance {
     private LatLng origin;
     private LatLng destination;
     private  int distance;
+    private String originAddress;
+
+    public String getOriginAddress() {
+        return originAddress;
+    }
+
+    public void setOriginAddress(String originAddress) {
+        this.originAddress = originAddress;
+    }
+
+    public String getDestinationAddress() {
+        return destinationAddress;
+    }
+
+    public void setDestinationAddress(String destinationAddress) {
+        this.destinationAddress = destinationAddress;
+    }
+
+    private String destinationAddress;
 
     public LatLng getOrigin() {
         return origin;

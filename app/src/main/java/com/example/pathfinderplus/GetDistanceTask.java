@@ -17,6 +17,18 @@ import java.net.URL;
 
 public class GetDistanceTask extends AsyncTask<String, Void, String> {
     private DistanceCallback distanceCallback;
+    private String address1;
+    private String address2;
+    private int totalApiCalls;
+
+    // Constructor to accept addresses and their indices
+    public GetDistanceTask(String address1, String address2, int totalApiCalls) {
+        this.address1 = address1;
+        this.address2 = address2;
+        this.totalApiCalls = totalApiCalls;
+
+    }
+
     public interface DistanceCallback {
         void onDistanceCalculated(Distance distance);
         void onDistanceCalculationFailed(String errorMessage);
@@ -26,6 +38,7 @@ public class GetDistanceTask extends AsyncTask<String, Void, String> {
     }
     private static final String TAG = "GetDistanceTask";
     private static final String API_KEY = "AIzaSyAXFwrx6mtQFOfHyTy6umAPjf5GJrAIY0A";
+    long currentTimeMillis = System.currentTimeMillis();
 
     @Override
     protected String doInBackground(String... params) {
@@ -34,7 +47,9 @@ public class GetDistanceTask extends AsyncTask<String, Void, String> {
         String urlString = "https://maps.googleapis.com/maps/api/directions/json?" +
                 "origin=" + origin +
                 "&destination=" + destination +
-                "&key=" + API_KEY;
+                "&key=" + API_KEY +
+                "&departure_time=" + currentTimeMillis +
+                "&traffic_model=best_guess";
 
         try {
             URL url = new URL(urlString);
@@ -70,7 +85,7 @@ public class GetDistanceTask extends AsyncTask<String, Void, String> {
                 if (status.equals("OK")) {
                     JSONObject route = jsonObject.getJSONArray("routes").getJSONObject(0);
                     JSONObject leg = route.getJSONArray("legs").getJSONObject(0);
-                    JSONObject duration = leg.getJSONObject("duration");
+                    JSONObject duration = leg.getJSONObject("duration_in_traffic");
                     JSONObject startLocation = leg.getJSONObject("start_location");
                     double originLat = startLocation.getDouble("lat");
                     double originLng = startLocation.getDouble("lng");
@@ -90,6 +105,9 @@ public class GetDistanceTask extends AsyncTask<String, Void, String> {
                     distance.setOrigin(new LatLng(originLat,originLng));
                     distance.setDestination(new LatLng(destLat,destLng));
                     distance.setDistance(durationSeconds);
+                    distance.setOriginAddress(address1);
+                    distance.setDestinationAddress(address2);
+
                     if (distanceCallback != null) {
                         distanceCallback.onDistanceCalculated(distance);
                     }
