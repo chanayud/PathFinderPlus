@@ -54,6 +54,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity implements GetDistanceTask.DistanceCallback {
 
@@ -87,22 +88,22 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        boolean geofenceTransition = getIntent().getBooleanExtra("geofence_transition", false);
-        if (geofenceTransition) {
+        //  boolean geofenceTransition = getIntent().getBooleanExtra("geofence_transition", false);
+      /*  if (geofenceTransition) {
             String geofenceId = getIntent().getStringExtra("geofence_id");
             // Now you have the geofence ID and can use it to identify the geofence
             Log.d("MainActivity", "Geofence ID: " + geofenceId);
             routeCalculateBySimulatedAnealing(distanceArray, addressesArray);
-        }
-        startForegroundService(new Intent(this, GeofenceForegroundService.class));
-        int locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
-        int backgroundLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION);
-        Log.d("MainActivity", "locationPermission: " + locationPermission + " backgroundLocationPermission: " + backgroundLocationPermission);
-        if (locationPermission != PackageManager.PERMISSION_GRANTED || backgroundLocationPermission != PackageManager.PERMISSION_GRANTED) {
-            Log.d("MainActivity", "I have no permissions");
-            //   ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION}, MY_PERMISSIONS_REQUEST_FINE_LOCATION);
-        }
-        Log.d("MainActivity", "Im here ");
+        }*/
+       // startForegroundService(new Intent(this, GeofenceForegroundService.class));
+        // int locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
+        // int backgroundLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+        // Log.d("MainActivity", "locationPermission: " + locationPermission + " backgroundLocationPermission: " + backgroundLocationPermission);
+        // if (locationPermission != PackageManager.PERMISSION_GRANTED || backgroundLocationPermission != PackageManager.PERMISSION_GRANTED) {
+        //     Log.d("MainActivity", "I have no permissions");
+        //   ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION}, MY_PERMISSIONS_REQUEST_FINE_LOCATION);
+        // }
+        //  Log.d("MainActivity", "Im here ");
         addressListLayout = findViewById(R.id.addressListLayoutID);
         addAddressButton = findViewById(R.id.saveAddressButtonID);
         giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
@@ -124,28 +125,15 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
         AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
                 getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
-        /*AutocompleteFilter filter = new AutocompleteFilter.Builder()
-                .setTypeFilter(AutocompleteFilter.TYPE_FILTER_ADDRESS)
-                .build();
-        List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS);
-        autocompleteFragment.setPlaceFields(fields);*/
-        // Specify the types of place data to return.
         autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME));
 
         // Set up a PlaceSelectionListener to handle the response.
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
-//            @Override
-//            public void onPlaceSelected(@NonNull Place place) {
-//                chosenAddress = place.getName();
-//                chosenAddressCoordinates = place.getLatLng();
-//            }
-
-            // Inside your PlaceSelectionListener
             @Override
             public void onPlaceSelected(@NonNull Place place) {
                 String placeId = place.getId();
 
-                // Now, make a Place Details request using the placeId
+                // make a Place Details request using the placeId
                 List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG);
                 FetchPlaceRequest request = FetchPlaceRequest.newInstance(placeId, fields);
 
@@ -156,7 +144,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
                     // Use formattedAddress and coordinates as needed
                 }).addOnFailureListener((exception) -> {
-                    // Handle error here
                     Log.e("MyLog", "Place details request failed: " + exception.getMessage());
                 });
             }
@@ -164,14 +151,10 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
             @Override
             public void onError(@NonNull Status status) {
-                // TODO: Handle the error.
                 Log.i("MyLog", "An error occurred: " + status);
             }
         });
 
-//        addAddress("גן רחל, הרב בלוך 7, קרית יערים, 9083800");
-//        addAddress("Sayeret Golani Street");
-//        addAddress("Jaffa Street");
         addAddressButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -183,7 +166,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 addressLayout.setLayoutParams(layoutParams);
 
                 TextView textView = new TextView(MainActivity.this);
-                if (chosenAddress != "" && chosenAddress != null) {
+                if (!Objects.equals(chosenAddress, "") && chosenAddress != null) {
                     textView.setText(chosenAddress);
                     textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
                     textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
@@ -220,7 +203,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 if (addressListLayout.getChildCount() != 0) {
                     giveRouteButton.setBackgroundColor(0xFFFF0000);
                     giveRouteButton.setEnabled(true);
-                    Log.d("TAG", "tehilaaaaaaaaa");
                 }
             }
         });
@@ -231,11 +213,11 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             public void onClick(View v) {
                 // Create a dialog builder
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                builder.setTitle("Add to Route History");
-                builder.setMessage("Do you want to add this destinations list to your route history?");
+                builder.setTitle("שמירה בהיסטוריה");
+                builder.setMessage("האם אתה רוצה לשמור את המסלול בהיסטורית המסלולים שלך?");
 
                 // Add buttons and their actions
-                builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                builder.setPositiveButton("כן", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         // User clicked "Yes," so save the address list to Firebase history
@@ -243,10 +225,9 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     }
                 });
 
-                builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+                builder.setNegativeButton("לא", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        // User clicked "No," do nothing or dismiss the dialog
                         dialog.dismiss();
                     }
                 });
@@ -254,25 +235,19 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 // Create and show the dialog
                 AlertDialog dialog = builder.create();
                 dialog.show();
-
                 distanceArray = new ArrayList<>();
                 int totalAddresses = addressesArray.size();
                 expectedApiCalls = factorial(totalAddresses) / (factorial(2) * factorial(totalAddresses - 2));
 
                 // Iterate over each element in the coordinatesArray
                 for (int i = 0; i < addressesArray.size(); i++) {
-                    //    LatLng coordinate1 = coordinatesArray.get(i);
                     LatLng address1 = addressesArray.get(i);
 
 
                     // Iterate over the remaining elements starting from the next index
                     for (int j = i + 1; j < addressesArray.size(); j++) {
                         LatLng address2 = addressesArray.get(j);
-                        Log.d("MYLOG", "onClick: pppppppppppppp");
 
-                        //  DistanceCalculator distanceCalculator = new DistanceCalculator();
-                        // GetDistanceTask getDistanceTask = new GetDistanceTask();
-                        //  getDistanceTask.setDistanceCallback(distanceCalculator); // Assuming DistanceCalculator implements the DistanceCallback interface
                         try {
                             distanceCalculator.calculateDistance(address1, address2, expectedApiCalls, MainActivity.this);
                         } catch (IOException e) {
@@ -292,49 +267,44 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         super.onDestroy();
 
         // Stop the location update service
-        stopService(new Intent(this, LocationUpdateService.class));
-        // Send the stop action to the foreground service
-        Intent stopIntent = new Intent(this, GeofenceForegroundService.class);
-        stopIntent.setAction("STOP_SERVICE_ACTION");
-        startService(stopIntent);
-
+        stopService(new Intent(this, GeofenceForegroundService.class));
     }
 
 
-    public void saveTheCoordinates(String address) {
-        // Create a Geocoder object
-        Geocoder geocoder = new Geocoder(this);
-
-
-        try {
-
-            // Get the first result from the Geocoder
-            List<Address> addresses = geocoder.getFromLocationName(address, 1);
-
-            // Check if the result is valid
-            if (addresses != null && !addresses.isEmpty()) {
-                Address location = addresses.get(0);
-
-                // Get the latitude and longitude
-                LatLng coordinates = new LatLng(location.getLatitude(), location.getLongitude());
-                //double latitude = location.getLatitude();
-                //double longitude = location.getLongitude();
-                //ArrayList<Double> addressCoordinates = new ArrayList<>();
-                //addressCoordinates.add(latitude);
-                // addressCoordinates.add(longitude);
-                addressesArray.add(chosenAddressCoordinates);
-
-
-                // Do something with the coordinates
-                Log.d("coordinates", "Latitude: " + latitude + ", Longitude: " + longitude);
-            } else {
-                Log.d("TAG", "No results found");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
+//    public void saveTheCoordinates(String address) {
+//        // Create a Geocoder object
+//        Geocoder geocoder = new Geocoder(this);
+//
+//
+//        try {
+//
+//            // Get the first result from the Geocoder
+//            List<Address> addresses = geocoder.getFromLocationName(address, 1);
+//
+//            // Check if the result is valid
+//            if (addresses != null && !addresses.isEmpty()) {
+//                Address location = addresses.get(0);
+//
+//                // Get the latitude and longitude
+//                LatLng coordinates = new LatLng(location.getLatitude(), location.getLongitude());
+//                //double latitude = location.getLatitude();
+//                //double longitude = location.getLongitude();
+//                //ArrayList<Double> addressCoordinates = new ArrayList<>();
+//                //addressCoordinates.add(latitude);
+//                // addressCoordinates.add(longitude);
+//                addressesArray.add(chosenAddressCoordinates);
+//
+//
+//                // Do something with the coordinates
+//                Log.d("coordinates", "Latitude: " + latitude + ", Longitude: " + longitude);
+//            } else {
+//                Log.d("TAG", "No results found");
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//    }
 
     @Override
     public void onDistanceCalculated(Distance distance) {
@@ -350,95 +320,122 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
             }
             routeCalculateBySimulatedAnealing(distanceArray, addressesArray);
-            //need to implement the algorithm of simulated anealing to get the shortest route that pass over all the destinations.
-
         }
     }
 
-    public void createGeofence(LatLng address) {
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-        String geofenceAddress = "";
-        try {
-            List<Address> addresses = geocoder.getFromLocation(address.latitude, address.longitude, 1);
-            if (addresses != null && !addresses.isEmpty()) {
-                Address address1 = addresses.get(0);
-                geofenceAddress = address1.getAddressLine(0);
-                Log.d("MainActivity", "createGeofence: geofenceAddress:" + geofenceAddress);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        Log.d("MainActivity", "createGeofence: latitude: " + address.latitude + "longitude: " + address.longitude);
-        GeofencingClient geofencingClient = LocationServices.getGeofencingClient(this);
-
-        Geofence geofence = new Geofence.Builder()
-                .setRequestId(geofenceAddress)
-                .setCircularRegion(address.latitude, address.longitude, radiusInMeters)
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .build();
-
-        GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
-                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-                .addGeofence(geofence)
-                .build();
-        Log.d("Geofence", "geofenceAddress: " + geofenceAddress);
-        PendingIntent geofencePendingIntent = PendingIntent.getBroadcast(
-                this,
-                0,
-                new Intent(this, GeofenceBroadcastReceiver.class),
-                PendingIntent.FLAG_UPDATE_CURRENT
-        );
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // Request location permission here if needed.
-            return;
-        }
-
-        geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent)
-                .addOnSuccessListener(this, new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Log.d("Geofence", "Geofences added successfully. " + geofencingRequest);
-
-                        // After successfully adding geofences, send a broadcast to trigger GeofenceBroadcastReceiver
-                        Intent geofenceIntent = new Intent("com.example.pathfinderplus.GEOFENCE_ACTION");
-                        // Optionally, add extra data to the intent if needed
-                        sendBroadcast(geofenceIntent);
-                    }
-                })
-                .addOnFailureListener(this, new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.e("Geofence", "Geofences not added. Error: " + e.getMessage());
-                    }
-                });
-    }
-    public void requestPermissions() {
+    //    public void createGeofence(LatLng address) {
+//        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+//        String geofenceAddress = "";
+//        try {
+//            List<Address> addresses = geocoder.getFromLocation(address.latitude, address.longitude, 1);
+//            if (addresses != null && !addresses.isEmpty()) {
+//                Address address1 = addresses.get(0);
+//                geofenceAddress = address1.getAddressLine(0);
+//                Log.d("MainActivity", "createGeofence: geofenceAddress:" + geofenceAddress);
+//            }
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//        Log.d("MainActivity", "createGeofence: latitude: " + address.latitude + "longitude: " + address.longitude);
+//        GeofencingClient geofencingClient = LocationServices.getGeofencingClient(this);
+//
+//        Geofence geofence = new Geofence.Builder()
+//                .setRequestId(geofenceAddress)
+//                .setCircularRegion(address.latitude, address.longitude, radiusInMeters)
+//                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
+//                .setExpirationDuration(Geofence.NEVER_EXPIRE)
+//                .build();
+//
+//        GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
+//                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
+//                .addGeofence(geofence)
+//                .build();
+//        Log.d("Geofence", "geofenceAddress: " + geofenceAddress);
+//        PendingIntent geofencePendingIntent = PendingIntent.getBroadcast(
+//                this,
+//                0,
+//                new Intent(this, GeofenceBroadcastReceiver.class),
+//                PendingIntent.FLAG_UPDATE_CURRENT
+//        );
+//
+//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//            // Request location permission here if needed.
+//            return;
+//        }
+//
+//        geofencingClient.addGeofences(geofencingRequest, geofencePendingIntent)
+//                .addOnSuccessListener(this, new OnSuccessListener<Void>() {
+//                    @Override
+//                    public void onSuccess(Void aVoid) {
+//                        Log.d("Geofence", "Geofences added successfully. " + geofencingRequest);
+//
+//                        // After successfully adding geofences, send a broadcast to trigger GeofenceBroadcastReceiver
+//                        Intent geofenceIntent = new Intent("com.example.pathfinderplus.GEOFENCE_ACTION");
+//                        // Optionally, add extra data to the intent if needed
+//                        sendBroadcast(geofenceIntent);
+//                    }
+//                })
+//                .addOnFailureListener(this, new OnFailureListener() {
+//                    @Override
+//                    public void onFailure(@NonNull Exception e) {
+//                        Log.e("Geofence", "Geofences not added. Error: " + e.getMessage());
+//                    }
+//                });
+//    }
+    public void requestPermissions()  {
         Log.d("MainActivity", "requestPermissions: ");
-            int backgroundPermission = ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.ACCESS_BACKGROUND_LOCATION);
-            int locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
-            List<String> listPermissionsNeeded = new ArrayList<>();
+        //    int backgroundPermission = ContextCompat.checkSelfPermission(this,
+        //            Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+        int locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
+        //   List<String> listPermissionsNeeded = new ArrayList<>();
         if (locationPermission != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
-        if (backgroundPermission != PackageManager.PERMISSION_GRANTED) {
-                listPermissionsNeeded.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
-            }
-        for(int i=0; i<listPermissionsNeeded.size(); i++) {
-            Log.d("MainActivity", "listPermissionsNeeded: " + listPermissionsNeeded.get(i));
-        }
-        if (!listPermissionsNeeded.isEmpty()) {
-            Log.d("MainActivity", "listPermissionsNeeded: ");
-            ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_FINE_LOCATION"},MY_PERMISSIONS_REQUEST_FINE_LOCATION);
+            ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_FINE_LOCATION"}, MY_PERMISSIONS_REQUEST_FINE_LOCATION);
+
+            //    listPermissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION);
+            // }
+        //  if (backgroundPermission != PackageManager.PERMISSION_GRANTED) {
+        //          listPermissionsNeeded.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+    //}
+    //  for(int i=0; i<listPermissionsNeeded.size(); i++) {
+    //      Log.d("MainActivity", "listPermissionsNeeded: " + listPermissionsNeeded.get(i));
+    //  }
+    //  if (!listPermissionsNeeded.isEmpty()) {
+    //      Log.d("MainActivity", "listPermissionsNeeded: ");
+    //      ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_FINE_LOCATION"},MY_PERMISSIONS_REQUEST_FINE_LOCATION);
+  }
+        else{
+            startNavigation(addressesArray.get(0));
         }
         Log.d("MainActivity", "requestPermissions: end");
 
     }
 
-        // Check if the app has location permissions
+//    public void requestPermissions() {
+//        Log.d("MainActivity", "requestPermissions: ");
+//        int backgroundPermission = ContextCompat.checkSelfPermission(this,
+//                Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+//        int locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
+//        List<String> listPermissionsNeeded = new ArrayList<>();
+//        if (locationPermission != PackageManager.PERMISSION_GRANTED) {
+//            listPermissionsNeeded.add(Manifest.permission.ACCESS_FINE_LOCATION);
+//        }
+//        if (backgroundPermission != PackageManager.PERMISSION_GRANTED) {
+//            listPermissionsNeeded.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+//        }
+//        for(int i=0; i<listPermissionsNeeded.size(); i++) {
+//            Log.d("MainActivity", "listPermissionsNeeded: " + listPermissionsNeeded.get(i));
+//        }
+//        if (!listPermissionsNeeded.isEmpty()) {
+//            Log.d("MainActivity", "listPermissionsNeeded: ");
+//            ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_FINE_LOCATION"},MY_PERMISSIONS_REQUEST_FINE_LOCATION);
+//        }
+//        Log.d("MainActivity", "requestPermissions: end");
+//
+//    }
+
+
+    // Check if the app has location permissions
        /* boolean needLocationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED;
 
         // Check if the app has background location permissions (Android 10 and later)
@@ -485,7 +482,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 Log.d("MainActivity", "onRequestPermissionsResult: " + requestCode);
             }
             else if(requestCode == 2) {
-                createGeofence(addressesArray.get(1));
+                //   createGeofence(addressesArray.get(1));
                 startNavigation(addressesArray.get(0));
             }
 
@@ -542,12 +539,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 //        });
 //        builder.show();
 //    }
-    private void openAppSettings(int requestCode, int[]grantResults) {
-        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-        Uri uri = Uri.fromParts("package", getPackageName(), null);
-        intent.setData(uri);
-        startActivity(intent);
-    }
+//    private void openAppSettings(int requestCode, int[]grantResults) {
+//        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+//        Uri uri = Uri.fromParts("package", getPackageName(), null);
+//        intent.setData(uri);
+//        startActivity(intent);
+//    }
 
 
     public ArrayList<Address> routeCalculateBySimulatedAnealing(ArrayList<Distance> distanceArray, ArrayList<LatLng> addressesArray){
@@ -559,14 +556,15 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 addressesArray.clear();
                 addressesArray.addAll(solution);
                 Log.d("mylog", "addressesArray: "+ addressesArray.get(0).latitude + " "+ addressesArray.get(0).longitude);
-                    Log.d("MainActivity", "createGeofence");
-                    createGeofence(addressesArray.get(1));    //address is an object that contains the name of the destination and its coordinates.
+                //    Log.d("MainActivity", "createGeofence");
+                  //  createGeofence(addressesArray.get(1));    //address is an object that contains the name of the destination and its coordinates.
                 if (addressesArray.size() > 1) {
                     // Remove the first address since you've already reached it
                     addressesArray.remove(0);
                 }
                 requestPermissions();
-                Log.d("mylog", "run: ");
+
+                //   Log.d("mylog", "run: ");
 
 
                 // Print the solution
@@ -584,19 +582,9 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     }
 
     public void startNavigation(LatLng destination) {
-        // if (currentDestinationIndex < DESTINATIONS.length) {
-        // String origin = (currentDestinationIndex == 0) ? "current_location" : DESTINATIONS[currentDestinationIndex - 1];
-        //    String destination = DESTINATIONS[currentDestinationIndex];
-        //   currentDestinationIndex++;
-
-        //  String navigationUrl = "https://www.google.com/maps/dir/?api=1&origin=" + origin + "&destination=" + destination + "&travelmode=driving&key=" + API_KEY;
-
-        // Open Google Maps with the navigation URL
-       // Intent intent = new Intent(android.content.Intent.ACTION_VIEW, Uri.parse(navigationUrl));
-       // startActivity(intent);
         double destinationLatitude = destination.latitude;
         double destinationLongitude = destination.longitude;
-        requestPermissions();
+      //  requestPermissions();
         Uri gmmIntentUri = Uri.parse("google.navigation:q=" + destinationLatitude + "," + destinationLongitude);
         Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
         mapIntent.setPackage("com.google.android.apps.maps");
@@ -637,53 +625,53 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         return null;
     }
 
-    private void addAddress(String chosenAddress) {
-        LinearLayout addressLayout = new LinearLayout(MainActivity.this);
-        addressLayout.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        addressLayout.setLayoutParams(layoutParams);
-
-        TextView textView = new TextView(MainActivity.this);
-        if (chosenAddress != null && !chosenAddress.isEmpty()) {
-            textView.setText(chosenAddress);
-            textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-            textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
-            textView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, android.R.color.white));
-            textView.setPadding(16, 16, 16, 16);
-            textView.setTextDirection(View.TEXT_DIRECTION_RTL);
-        }
-
-        Button deleteButton = new Button(MainActivity.this);
-        LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        deleteButton.setLayoutParams(buttonLayoutParams);
-        deleteButton.setBackgroundResource(R.drawable.ic_trash_can);
-
-        deleteButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                addressListLayout.removeView(addressLayout);
-                if (addressListLayout.getChildCount() == 0) {
-                    giveRouteButton.setBackgroundColor(0xCCCCCC);
-                    giveRouteButton.setEnabled(false);
-                }
-            }
-        });
-
-        addressLayout.addView(deleteButton);
-        addressLayout.addView(textView);
-        addressesArray.add(chosenAddressCoordinates);
-
-        addressListLayout.addView(addressLayout);
-
-        if (addressListLayout.getChildCount() != 0) {
-            giveRouteButton.setBackgroundColor(0xFFFF0000);
-            giveRouteButton.setEnabled(true);
-        }
-    }
+//    private void addAddress(String chosenAddress) {
+//        LinearLayout addressLayout = new LinearLayout(MainActivity.this);
+//        addressLayout.setOrientation(LinearLayout.HORIZONTAL);
+//        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+//                LinearLayout.LayoutParams.MATCH_PARENT,
+//                LinearLayout.LayoutParams.WRAP_CONTENT);
+//        addressLayout.setLayoutParams(layoutParams);
+//
+//        TextView textView = new TextView(MainActivity.this);
+//        if (chosenAddress != null && !chosenAddress.isEmpty()) {
+//            textView.setText(chosenAddress);
+//            textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+//            textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
+//            textView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, android.R.color.white));
+//            textView.setPadding(16, 16, 16, 16);
+//            textView.setTextDirection(View.TEXT_DIRECTION_RTL);
+//        }
+//
+//        Button deleteButton = new Button(MainActivity.this);
+//        LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
+//                LinearLayout.LayoutParams.WRAP_CONTENT,
+//                LinearLayout.LayoutParams.WRAP_CONTENT);
+//        deleteButton.setLayoutParams(buttonLayoutParams);
+//        deleteButton.setBackgroundResource(R.drawable.ic_trash_can);
+//
+//        deleteButton.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                addressListLayout.removeView(addressLayout);
+//                if (addressListLayout.getChildCount() == 0) {
+//                    giveRouteButton.setBackgroundColor(0xCCCCCC);
+//                    giveRouteButton.setEnabled(false);
+//                }
+//            }
+//        });
+//
+//        addressLayout.addView(deleteButton);
+//        addressLayout.addView(textView);
+//        addressesArray.add(chosenAddressCoordinates);
+//
+//        addressListLayout.addView(addressLayout);
+//
+//        if (addressListLayout.getChildCount() != 0) {
+//            giveRouteButton.setBackgroundColor(0xFFFF0000);
+//            giveRouteButton.setEnabled(true);
+//        }
+//    }
 
     public void saveToFirebaseHistory(ArrayList<LatLng> addressesArray) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
