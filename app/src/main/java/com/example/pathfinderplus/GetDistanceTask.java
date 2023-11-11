@@ -17,12 +17,12 @@ import java.net.URL;
 
 public class GetDistanceTask extends AsyncTask<String, Void, String> {
     private DistanceCallback distanceCallback;
-    private String address1;
-    private String address2;
+    private LatLng address1;
+    private LatLng address2;
     private int totalApiCalls;
 
     // Constructor to accept addresses and their indices
-    public GetDistanceTask(String address1, String address2, int totalApiCalls) {
+    public GetDistanceTask(LatLng address1, LatLng address2, int totalApiCalls) {
         this.address1 = address1;
         this.address2 = address2;
         this.totalApiCalls = totalApiCalls;
@@ -37,7 +37,7 @@ public class GetDistanceTask extends AsyncTask<String, Void, String> {
         distanceCallback = callback;
     }
     private static final String TAG = "GetDistanceTask";
-    private static final String API_KEY = "AIzaSyAXFwrx6mtQFOfHyTy6umAPjf5GJrAIY0A";
+    private static final String API_KEY = "AIzaSyB2wY2x6ZthLJ0XsvsdVahEY-Iap6ryi6M";
     long currentTimeMillis = System.currentTimeMillis();
 
     @Override
@@ -105,8 +105,8 @@ public class GetDistanceTask extends AsyncTask<String, Void, String> {
                     distance.setOrigin(new LatLng(originLat,originLng));
                     distance.setDestination(new LatLng(destLat,destLng));
                     distance.setDistance(durationSeconds);
-                    distance.setOriginAddress(address1);
-                    distance.setDestinationAddress(address2);
+                    distance.setOrigin(address1);
+                    distance.setDestination(address2);
 
                     if (distanceCallback != null) {
                         distanceCallback.onDistanceCalculated(distance);
