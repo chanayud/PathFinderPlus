@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "533237991695",
+    "project_id": "pathfinderplus-7558b",
+    "storage_bucket": "pathfinderplus-7558b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:533237991695:android:d5175a722283b4da63167a",
+        "android_client_info": {
+          "package_name": "com.example.pathfinderplus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5HtijddCKsV2y7LhOZBQYxY45TNSQcXA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
