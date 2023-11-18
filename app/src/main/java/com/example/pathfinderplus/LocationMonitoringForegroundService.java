@@ -9,6 +9,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -134,11 +135,11 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 //            broadcastIntent.putExtra("JOB_ID", JOB_ID);
 //            LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent);
 //            Log.d("MainActivity", "Broadcast sent");
-            navigateToNextDestination(JOB_ID);
+            notify(JOB_ID);
 
         }
     }
-    private void navigateToNextDestination(String jobId) {
+    private void notify(String jobId) {
         Log.d("MainActivity", "Navigating to the next destination");
 
         // Create an intent to open your app when the notification is clicked
@@ -148,14 +149,41 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         PendingIntent appPendingIntent = PendingIntent.getActivity(
                 this, 0, appIntent, PendingIntent.FLAG_IMMUTABLE);
 
+        // Notification channel settings
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager notificationManager =
+                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+            // Create a notification channel with high importance
+            NotificationChannel channel = new NotificationChannel("channel_id", "Channel Name", NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription("Channel Description");
+            channel.setShowBadge(true); // Enable badge icon for this channel
+            channel.enableLights(true);
+            channel.setLightColor(Color.RED);
+            channel.enableVibration(true);
+
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+
         // Build the notification with a button to go back to your app
-        Notification notification = new NotificationCompat.Builder(this, "channel_id")
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "channel_id")
                 .setContentTitle("Destination Reached")
                 .setContentText("You have reached your destination.")
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentIntent(appPendingIntent)
                 .setAutoCancel(true)
-                .build();
+                .setPriority(NotificationCompat.PRIORITY_HIGH) // Set notification priority to high
+                .setDefaults(NotificationCompat.DEFAULT_ALL); // Set default notification behaviors
+
+        // For heads-up notification (requires API level 21 or above)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            notificationBuilder.setFullScreenIntent(null, true);
+        }
+
+        // Build the notification
+        Notification notification = notificationBuilder.build();
 
         // Display the notification
         NotificationManager notificationManager =
@@ -164,6 +192,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             notificationManager.notify(jobId.hashCode(), notification);
         }
     }
+
 
 
     @Override

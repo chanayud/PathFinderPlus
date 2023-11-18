@@ -23,6 +23,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -32,9 +33,11 @@ import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
@@ -65,7 +68,7 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity implements GetDistanceTask.DistanceCallback {
 
-    private LinearLayout addressListLayout;
+    public static LinearLayout addressListLayout;
     private double longitude;
     private double latitude;
     private LatLng latLng;
@@ -84,7 +87,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     int MY_PERMISSIONS_REQUEST_BACKGROUND_LOCATION = 2;
     int REQUEST_ID_MULTIPLE_PERMISSIONS = 1;
     private static final int MY_PERMISSIONS_REQUEST_COMBINED = 123;
-    public static int counter = 0;
+   // public static int counter = 0;
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    private ProgressBar progressBar;
+
+
+
 
     private BroadcastReceiver myReceiver;
     private static final String ACTION_TRIGGERED = "com.example.pathfinderplus.ACTION_TRIGGERED";
@@ -94,11 +102,11 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        progressBar = findViewById(R.id.progressBar);
         Intent intent = getIntent();
         if (intent != null && "START_NAVIGATION".equals(intent.getAction())) {
-            counter++;
-            Log.d("MainActivity", "onCreate, counter: "+counter);
-            startNavigation(addressesArray.get(counter));  // Call your method to start navigation
+//            Log.d("MainActivity", "onCreate, counter: "+counter);
+            routeCalculateBySimulatedAnealing();  // Call your method to start navigation
         }
 
             //  boolean geofenceTransition = getIntent().getBooleanExtra("geofence_transition", false);
@@ -123,13 +131,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         //      navigateToNextDestination();
         //  }
         Log.d("MainActivity", "onCreate: I'm here again");
-        myReceiver = new BroadcastReceiver() {
+    /*    myReceiver = new BroadcastReceiver() {
             @Override
                 public void onReceive(Context context, Intent intent) {
                     String jobId = intent.getStringExtra("JOB_ID");
                     if (jobId != null) {
                         Log.d("MainActivity", "Received broadcast with JOB_ID: " + jobId);
-                        // Handle the broadcast, e.g., navigate to the next destination
                         navigateToNextDestination();
                     }
                 }
@@ -141,6 +148,8 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         LocalBroadcastManager.getInstance(this).
 
                 registerReceiver(myReceiver, intentFilter);
+
+     */
 
 
     addressListLayout = findViewById(R.id.addressListLayoutID);
@@ -274,27 +283,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 // Create and show the dialog
                 AlertDialog dialog = builder.create();
                 dialog.show();
-                distanceArray = new ArrayList<>();
-                int totalAddresses = addressesArray.size();
-                expectedApiCalls = factorial(totalAddresses) / (factorial(2) * factorial(totalAddresses - 2));
-
-                // Iterate over each element in the coordinatesArray
-                for (int i = 0; i < addressesArray.size(); i++) {
-                    LatLng address1 = addressesArray.get(i);
-
-
-                    // Iterate over the remaining elements starting from the next index
-                    for (int j = i + 1; j < addressesArray.size(); j++) {
-                        LatLng address2 = addressesArray.get(j);
-
-                        try {
-                            distanceCalculator.calculateDistance(address1, address2, expectedApiCalls, MainActivity.this);
-                        } catch (IOException e) {
-                            Log.d("mylog", "exception: ", e);
-                        }
-
-                    }
-                }
+                requestPermissions();
             }
         });
 
@@ -361,7 +350,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 Log.d("MYLOG", "Distance: " + distanceArray.get(i).getDistance());
 
             }
-            routeCalculateBySimulatedAnealing(distanceArray, addressesArray);
+            routeCalculateBySimulatedAnealing();
         }
     }
 
@@ -447,12 +436,57 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     //      ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_FINE_LOCATION"},MY_PERMISSIONS_REQUEST_FINE_LOCATION);
   }
         else{
-            startNavigation(addressesArray.get(counter));
+            addCurrentLocation();
 //            counter++;
         }
         Log.d("MainActivity", "requestPermissions: end");
 
     }
+
+    public void addCurrentLocation() {
+        // Initialize the Fused Location Provider client
+        FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        // Check for permission and request if needed
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+        } else {
+            // Permission already granted, proceed to get the current location
+            fusedLocationClient.getLastLocation()
+                    .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+                            if (location != null) {
+                                // Got the current location
+                                LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                                // Add the current location to the addressesArray at the first position
+                                addressesArray.add(0, currentLatLng);
+
+                                // Rest of your code here (distance calculation)
+                                // ...
+                                distanceArray = new ArrayList<>();
+                                int totalAddresses = addressesArray.size();
+                                expectedApiCalls = factorial(totalAddresses) / (factorial(2) * factorial(totalAddresses - 2));
+
+                                for (int i = 0; i < addressesArray.size(); i++) {
+                                    LatLng address1 = addressesArray.get(i);
+
+                                    for (int j = i + 1; j < addressesArray.size(); j++) {
+                                        LatLng address2 = addressesArray.get(j);
+
+                                        try {
+                                            distanceCalculator.calculateDistance(address1, address2, expectedApiCalls, MainActivity.this);
+                                        } catch (IOException e) {
+                                            Log.d("mylog", "exception: ", e);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+        }
+    }
+
 
 //    public void requestPermissions() {
 //        Log.d("MainActivity", "requestPermissions: ");
@@ -525,9 +559,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 Log.d("MainActivity", "onRequestPermissionsResult: " + requestCode);
             }
             else if(requestCode == 2) {
-                //   createGeofence(addressesArray.get(1));
-                startNavigation(addressesArray.get(counter));
-//                counter++;
+                startNavigation(addressesArray.get(0));
             }
 
             }
@@ -591,10 +623,13 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 //    }
 
 
-    public ArrayList<Address> routeCalculateBySimulatedAnealing(ArrayList<Distance> distanceArray, ArrayList<LatLng> addressesArray){
+    public void routeCalculateBySimulatedAnealing(){
+        progressBar.setVisibility(View.VISIBLE); // Show the spinner
+
         new Thread(new Runnable() {
             @Override
             public void run() {
+
                 // Execute the code in a new thread
                 ArrayList<LatLng> solution = TSPSolver.solveTSP(addressesArray, distanceArray);
                 addressesArray.clear();
@@ -606,8 +641,14 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     // Remove the first address since you've already reached it
                     addressesArray.remove(0);
                 }
-                requestPermissions();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        progressBar.setVisibility(View.GONE); // Dismiss the spinner
+                    }
+                });
 
+                startNavigation(addressesArray.get(0));
                 //   Log.d("mylog", "run: ");
 
 
@@ -618,15 +659,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 }
             }
         }).start();
-        return null;
     };
 
-    public void navigateToNextDestination(){
-        Log.d("MainActivity", "navigateToNextDestination");
-        counter++;
-        startNavigation(addressesArray.get(counter));
-
-    }
+//    public void navigateToNextDestination(){
+//        Log.d("MainActivity", "navigateToNextDestination");
+//        routeCalculateBySimulatedAnealing();
+//    }
 
     public void startNavigation(LatLng destination) {
         Log.d("MainActivity", "start navigation");
@@ -639,7 +677,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         Intent serviceIntent = new Intent(this, LocationMonitoringForegroundService.class);
         serviceIntent.putExtra("DESTINATION_LATITUDE", destinationLatitude);
         serviceIntent.putExtra("DESTINATION_LONGITUDE", destinationLongitude);
-        serviceIntent.putExtra("JOB_ID", jobId); // Add JOB_ID here
+        serviceIntent.putExtra("JOB_ID", jobId);
         Log.d("MainActivity", "DESTINATION_LATITUDE: "+destinationLatitude+" DESTINATION_LONGITUDE: "+destinationLongitude+" JOB_ID: "+jobId);
 
         startService(serviceIntent);
