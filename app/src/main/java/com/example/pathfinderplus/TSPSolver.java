@@ -1,5 +1,7 @@
 package com.example.pathfinderplus;
 
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.ArrayList;
@@ -15,6 +17,7 @@ public class TSPSolver {
     private static final int ITERATIONS_PER_TEMPERATURE = 1000;
 
     public static ArrayList<LatLng> solveTSP(ArrayList<LatLng> cities, ArrayList<Distance> distances) {
+        Log.d("MainActivity", "cities.size:"+cities.size());
         ArrayList<LatLng> bestSolution = new ArrayList<>(cities);
         ArrayList<LatLng> currentSolution = new ArrayList<>(cities);
 
@@ -58,6 +61,7 @@ public class TSPSolver {
     }
 
     private static int getRandomIndex(int size) {
+        Log.d("MainActivity", "size: "+size);
         Random random = new Random();
         return random.nextInt(size);
     }

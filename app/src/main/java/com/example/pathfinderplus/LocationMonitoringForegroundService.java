@@ -25,6 +25,9 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class LocationMonitoringForegroundService extends Service implements LocationListener {
 
+    private boolean isServiceRunning = false;
+
+
     private static final int TRIGGER_DISTANCE_METERS = 100;
     private static final int NOTIFICATION_ID = 123;
 
@@ -49,15 +52,23 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 
     }
 
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("MainActivity", "onStartCommand");
+        Log.d("MainActivity", "onStartCommand: intent: "+intent);
+        if (!isServiceRunning) {
+            isServiceRunning = true;
 
-        targetLatitude = intent.getDoubleExtra("DESTINATION_LATITUDE", 0.0);
-        targetLongitude = intent.getDoubleExtra("DESTINATION_LONGITUDE", 0.0);
-        JOB_ID = intent.getStringExtra("JOB_ID");
-        Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude+" JOB_ID: "+JOB_ID);
+            // if (intent != null && intent.getAction() != null && intent.getAction().equals("START_NAVIGATION")) {
+                targetLatitude = intent.getDoubleExtra("DESTINATION_LATITUDE", 0.0);
+                targetLongitude = intent.getDoubleExtra("DESTINATION_LONGITUDE", 0.0);
+                JOB_ID = intent.getStringExtra("JOB_ID");
+                Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude + " JOB_ID: " + JOB_ID);
+      //  }
+            // Clear the intent extras to avoid using the same values if the activity is recreated
+            //intent.removeExtra("DESTINATION_LATITUDE");
+            //intent.removeExtra("DESTINATION_LONGITUDE");
+            //intent.removeExtra("JOB_ID");
+        }
 
         startLocationMonitoring();
 
@@ -93,21 +104,22 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 100, this);
         } else {
             Log.d("TAG", "startLocationMonitoring: Missing location permissions");
-            // TODO: Handle permission request
         }
     }
 
-    private void stopLocationMonitoring() {
-        if (locationManager != null) {
-            locationManager.removeUpdates(this);
-        }
-    }
+//    private void stopLocationMonitoring() {
+//        Log.d("MainActivity", "stopLocationMonitoring: ");
+//        if (locationManager != null) {
+//            locationManager.removeUpdates(this);
+//        }
+//    }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        stopLocationMonitoring();
-    }
+    //@Override
+//    public void onDestroy() {
+//        super.onDestroy();
+//        isServiceRunning = false;
+//        stopLocationMonitoring();
+//    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -121,6 +133,8 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         double currentLatitude = location.getLatitude();
         double currentLongitude = location.getLongitude();
         Log.d("MainActivity", "currentLatitude: " + currentLatitude + " currentLongitude: " + currentLongitude);
+        Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude);
+
 
         float[] results = new float[1];
         Location.distanceBetween(currentLatitude, currentLongitude, targetLatitude, targetLongitude, results);
@@ -144,7 +158,10 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 
         // Create an intent to open your app when the notification is clicked
         Intent appIntent = new Intent(this, MainActivity.class);
-        appIntent.setAction("START_NAVIGATION");  // Add this line to set the action
+        appIntent.setAction("START_NAVIGATION");
+        appIntent.putExtra("DESTINATION_LATITUDE", targetLatitude); // Pass destination latitude
+        appIntent.putExtra("DESTINATION_LONGITUDE", targetLongitude); // Pass destination longitude
+        appIntent.putExtra("JOB_ID", jobId); // Pass job ID
         appIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent appPendingIntent = PendingIntent.getActivity(
                 this, 0, appIntent, PendingIntent.FLAG_IMMUTABLE);
