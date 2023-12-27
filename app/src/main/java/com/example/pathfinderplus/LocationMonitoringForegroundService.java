@@ -21,6 +21,7 @@ import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class LocationMonitoringForegroundService extends Service implements LocationListener {
@@ -43,27 +44,27 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         super.onCreate();
 
         // Create the notification channel if running on Android Oreo (API level 26) or higher
-            NotificationChannel channel = new NotificationChannel("channel_id", "Channel Name", NotificationManager.IMPORTANCE_DEFAULT);
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
+        NotificationChannel channel = new NotificationChannel("channel_id", "Channel Name", NotificationManager.IMPORTANCE_DEFAULT);
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.createNotificationChannel(channel);
+        }
 
 
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("MainActivity", "onStartCommand: intent: "+intent);
+        Log.d("MainActivity", "onStartCommand: intent: " + intent);
         if (!isServiceRunning) {
             isServiceRunning = true;
 
             // if (intent != null && intent.getAction() != null && intent.getAction().equals("START_NAVIGATION")) {
-                targetLatitude = intent.getDoubleExtra("DESTINATION_LATITUDE", 0.0);
-                targetLongitude = intent.getDoubleExtra("DESTINATION_LONGITUDE", 0.0);
-                JOB_ID = intent.getStringExtra("JOB_ID");
-                Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude + " JOB_ID: " + JOB_ID);
-      //  }
+            targetLatitude = intent.getDoubleExtra("DESTINATION_LATITUDE", 0.0);
+            targetLongitude = intent.getDoubleExtra("DESTINATION_LONGITUDE", 0.0);
+            JOB_ID = intent.getStringExtra("JOB_ID");
+            Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude + " JOB_ID: " + JOB_ID);
+            //  }
             // Clear the intent extras to avoid using the same values if the activity is recreated
             //intent.removeExtra("DESTINATION_LATITUDE");
             //intent.removeExtra("DESTINATION_LONGITUDE");
@@ -153,6 +154,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 
         }
     }
+
     private void notify(String jobId) {
         Log.d("MainActivity", "Navigating to the next destination");
 
@@ -167,7 +169,6 @@ public class LocationMonitoringForegroundService extends Service implements Loca
                 this, 0, appIntent, PendingIntent.FLAG_IMMUTABLE);
 
         // Notification channel settings
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager notificationManager =
                     (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
@@ -182,32 +183,54 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             if (notificationManager != null) {
                 notificationManager.createNotificationChannel(channel);
             }
-        }
 
-        // Build the notification with a button to go back to your app
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "channel_id")
+
+        // Build the notification with a button to go back to our app
+//        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "channel_id")
+//                .setContentTitle("Destination Reached")
+//                .setContentText("You have reached your destination.")
+//                .setSmallIcon(R.mipmap.ic_launcher)
+//                .setContentIntent(appPendingIntent)
+//                .setAutoCancel(true)
+//                .setPriority(NotificationCompat.PRIORITY_HIGH) // Set notification priority to high
+//                .setDefaults(NotificationCompat.DEFAULT_ALL); // Set default notification behaviors
+
+        NotificationCompat.Builder notification = new NotificationCompat.Builder(this, "channel_id")
+                .setSmallIcon(R.drawable.icons8_notification)
                 .setContentTitle("Destination Reached")
                 .setContentText("You have reached your destination.")
-                .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentIntent(appPendingIntent)
-                .setAutoCancel(true)
-                .setPriority(NotificationCompat.PRIORITY_HIGH) // Set notification priority to high
-                .setDefaults(NotificationCompat.DEFAULT_ALL); // Set default notification behaviors
+                    .setPriority(NotificationCompat.PRIORITY_MAX) // Set notification priority to high
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setAutoCancel(true);
+//                .setDefaults(NotificationCompat.DEFAULT_ALL); // Set default notification behaviors
+
 
         // For heads-up notification (requires API level 21 or above)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            notificationBuilder.setFullScreenIntent(null, true);
+        //notificationBuilder.setFullScreenIntent(null, true);
+       NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(this);
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
         }
+        notificationManagerCompat.notify(0, notification.build());
+
 
         // Build the notification
-        Notification notification = notificationBuilder.build();
+     //   Notification notification = notificationBuilder.build();
 
         // Display the notification
-        NotificationManager notificationManager =
+      /*  NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (notificationManager != null) {
             notificationManager.notify(jobId.hashCode(), notification);
-        }
+        }*/
     }
 
 
