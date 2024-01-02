@@ -103,6 +103,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         addAddressButton = findViewById(R.id.saveAddressButtonID);
         giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
         Intent intent = getIntent();
+        distanceCalculator = new DistanceCalculator(this);
         if (intent != null && "START_NAVIGATION".equals(intent.getAction())) {
             Log.d("MainActivity", "stop service here");
             stopService(serviceIntent);
@@ -118,47 +119,10 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 if (addresses != null && !addresses.isEmpty()) {
                     addressListLayout.removeAllViews();
                     addressesArray.clear();
-                    distanceCalculator = new DistanceCalculator(this);
                     for (LatLng latLng : addresses) {
-                        LinearLayout addressLayout = new LinearLayout(MainActivity.this);
-                        addressLayout.setOrientation(LinearLayout.HORIZONTAL);
-                        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                                LinearLayout.LayoutParams.MATCH_PARENT,
-                                LinearLayout.LayoutParams.WRAP_CONTENT);
-                        addressLayout.setLayoutParams(layoutParams);
-
-                        TextView textView = new TextView(MainActivity.this);
-                        String address = convertLatLngToAddress(MainActivity.this, latLng.latitude, latLng.longitude);
-                        if (address != null) {
-                            textView.setText(address);
-                            // Set other attributes for textView
-                        }
-
-                        Button deleteButton = new Button(MainActivity.this);
-                        // Set attributes for deleteButton
-
-                        deleteButton.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                addressListLayout.removeView(addressLayout);
-                                addressesArray.remove(latLng);
-                                if (addressListLayout.getChildCount() == 0) {
-                                    giveRouteButton.setBackgroundColor(0xCCCCCC);
-                                    giveRouteButton.setEnabled(false);
-                                }
-                            }
-                        });
-
-                        addressLayout.addView(deleteButton);
-                        addressLayout.addView(textView);
-                        addressesArray.add(latLng);
-
-                        addressListLayout.addView(addressLayout);
-                    }
-
-                    if (addressListLayout.getChildCount() != 0) {
-                        giveRouteButton.setBackgroundColor(0xFFFF0000);
-                        giveRouteButton.setEnabled(true);
+                        chosenAddressCoordinates = latLng;
+                        String address = convertLatLngToAddress(this, latLng.latitude, latLng.longitude);
+                        addView(address);
                     }
                 }
             }
@@ -203,52 +167,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             addAddressButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    LinearLayout addressLayout = new LinearLayout(MainActivity.this);
-                    addressLayout.setOrientation(LinearLayout.HORIZONTAL);
-                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT);
-                    addressLayout.setLayoutParams(layoutParams);
-
-                    TextView textView = new TextView(MainActivity.this);
-                    if (!Objects.equals(chosenAddress, "") && chosenAddress != null) {
-                        textView.setText(chosenAddress);
-                        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-                        textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
-                        textView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, android.R.color.white));
-                        textView.setPadding(16, 16, 16, 16);
-                        textView.setTextDirection(View.TEXT_DIRECTION_RTL);
-                    }
-
-                    Button deleteButton = new Button(MainActivity.this);
-                    LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT);
-                    deleteButton.setLayoutParams(buttonLayoutParams);
-                    deleteButton.setBackgroundResource(R.drawable.ic_trash_can);
-
-                    deleteButton.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            addressListLayout.removeView(addressLayout);
-                            if (addressListLayout.getChildCount() == 0) {
-                                giveRouteButton.setBackgroundColor(0xCCCCCC);
-                                giveRouteButton.setEnabled(false);
-                            }
-                        }
-                    });
-
-                    addressLayout.addView(deleteButton);
-                    addressLayout.addView(textView);
-                    addressesArray.add(chosenAddressCoordinates);
-
-
-                    addressListLayout.addView(addressLayout);
-
-                    if (addressListLayout.getChildCount() != 0) {
-                        giveRouteButton.setBackgroundColor(0xFFFF0000);
-                        giveRouteButton.setEnabled(true);
-                    }
+                    addView(chosenAddress);
                 }
             });
 
@@ -768,6 +687,54 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         });
     }
 
+public void addView(String chosenAddress){
+    LinearLayout addressLayout = new LinearLayout(MainActivity.this);
+    addressLayout.setOrientation(LinearLayout.HORIZONTAL);
+    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+    addressLayout.setLayoutParams(layoutParams);
 
+    TextView textView = new TextView(MainActivity.this);
+    if (!Objects.equals(chosenAddress, "") && chosenAddress != null) {
+        textView.setText(chosenAddress);
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
+        textView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, android.R.color.white));
+        textView.setPadding(16, 16, 16, 16);
+        textView.setTextDirection(View.TEXT_DIRECTION_RTL);
+    }
+
+    Button deleteButton = new Button(MainActivity.this);
+    LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT);
+    deleteButton.setLayoutParams(buttonLayoutParams);
+    deleteButton.setBackgroundResource(R.drawable.ic_trash_can);
+
+    deleteButton.setOnClickListener(new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            addressListLayout.removeView(addressLayout);
+            if (addressListLayout.getChildCount() == 0) {
+                giveRouteButton.setBackgroundColor(0xCCCCCC);
+                giveRouteButton.setEnabled(false);
+            }
+        }
+    });
+
+    addressLayout.addView(deleteButton);
+    addressLayout.addView(textView);
+    addressesArray.add(chosenAddressCoordinates);
+
+
+    addressListLayout.addView(addressLayout);
+
+    if (addressListLayout.getChildCount() != 0) {
+        giveRouteButton.setBackgroundColor(0xFFFF0000);
+        giveRouteButton.setEnabled(true);
+    }
+
+}
 
 }

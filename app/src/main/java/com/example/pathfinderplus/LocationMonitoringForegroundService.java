@@ -44,7 +44,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         super.onCreate();
 
         // Create the notification channel if running on Android Oreo (API level 26) or higher
-        NotificationChannel channel = new NotificationChannel("channel_id", "Channel Name", NotificationManager.IMPORTANCE_DEFAULT);
+        NotificationChannel channel = new NotificationChannel("1234", "service notification", NotificationManager.IMPORTANCE_DEFAULT);
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (manager != null) {
             manager.createNotificationChannel(channel);
@@ -64,11 +64,6 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             targetLongitude = intent.getDoubleExtra("DESTINATION_LONGITUDE", 0.0);
             JOB_ID = intent.getStringExtra("JOB_ID");
             Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude + " JOB_ID: " + JOB_ID);
-            //  }
-            // Clear the intent extras to avoid using the same values if the activity is recreated
-            //intent.removeExtra("DESTINATION_LATITUDE");
-            //intent.removeExtra("DESTINATION_LONGITUDE");
-            //intent.removeExtra("JOB_ID");
         }
 
         startLocationMonitoring();
@@ -83,7 +78,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
-        Notification notification = new NotificationCompat.Builder(this, "channel_id")
+        Notification notification = new NotificationCompat.Builder(this, "1234")
                 .setContentTitle("Location Monitoring Service")
                 .setContentText("Monitoring location in the background")
                 .setSmallIcon(R.mipmap.ic_launcher)
@@ -173,7 +168,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
                     (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
             // Create a notification channel with high importance
-            NotificationChannel channel = new NotificationChannel("channel_id", "Channel Name", NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel("5678", "destination reached notification", NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("Channel Description");
             channel.setShowBadge(true); // Enable badge icon for this channel
             channel.enableLights(true);
@@ -195,7 +190,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 //                .setPriority(NotificationCompat.PRIORITY_HIGH) // Set notification priority to high
 //                .setDefaults(NotificationCompat.DEFAULT_ALL); // Set default notification behaviors
 
-        NotificationCompat.Builder notification = new NotificationCompat.Builder(this, "channel_id")
+        NotificationCompat.Builder notification = new NotificationCompat.Builder(this, "5678")
                 .setSmallIcon(R.drawable.icons8_notification)
                 .setContentTitle("Destination Reached")
                 .setContentText("You have reached your destination.")
