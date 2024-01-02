@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -10,9 +9,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-
-
-
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -26,10 +22,23 @@
         android:theme="@style/Theme.PathFinderPlus"
         tools:targetApi="31">
         <activity
+            android:name=".CustomAdapter"
+            android:exported="false" />
+        <activity
+            android:name=".LatLngAdapter"
+            android:exported="false" />
+        <activity
+            android:name=".HistoryList"
+            android:exported="false" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false" />
+        <activity
             android:name=".SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -44,16 +53,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data android:scheme="pathfinderplus" />
-
             </intent-filter>
         </activity>
+
         <service
             android:name=".LocationMonitoringForegroundService"
             android:enabled="true"
-            android:exported="false"
-            />
-
-
+            android:exported="false" />
         <service
             android:name=".GeofenceForegroundService"
             android:exported="false">
@@ -66,13 +72,13 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
 
-        <receiver android:name="com.example.pathfinderplus.GeofenceBroadcastReceiver"
+        <receiver
+            android:name=".GeofenceBroadcastReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.example.pathfinderplus.GEOFENCE_ACTION" />
             </intent-filter>
         </receiver>
     </application>
-
 
 </manifest>

@@ -35,8 +35,10 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.net.FetchPlaceRequest;
@@ -45,6 +47,7 @@ import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.IOException;
@@ -79,6 +82,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     public static Intent serviceIntent;
     public double shortestDistance = Double.MAX_VALUE;
     public ArrayList<LatLng> shortestRoute = new ArrayList<>();
+    private String password;
 
 
     com.google.android.gms.location.LocationCallback locationCallback;
@@ -91,9 +95,13 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        password = getIntent().getStringExtra("PASSWORD_EXTRA");
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         setContentView(R.layout.activity_main);
         progressBar = findViewById(R.id.progressBar);
+        addressListLayout = findViewById(R.id.addressListLayoutID);
+        addAddressButton = findViewById(R.id.saveAddressButtonID);
+        giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
         Intent intent = getIntent();
         if (intent != null && "START_NAVIGATION".equals(intent.getAction())) {
             Log.d("MainActivity", "stop service here");
@@ -105,11 +113,55 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 routeCalculateBySimulatedAnealing();
             }
         } else {
-            addressesArray.clear();
-            addressListLayout = findViewById(R.id.addressListLayoutID);
-            addAddressButton = findViewById(R.id.saveAddressButtonID);
-            giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
-            distanceCalculator = new DistanceCalculator(this);
+            if (intent != null) {
+                ArrayList<LatLng> addresses = intent.getParcelableArrayListExtra("addresses");
+                if (addresses != null && !addresses.isEmpty()) {
+                    addressListLayout.removeAllViews();
+                    addressesArray.clear();
+                    distanceCalculator = new DistanceCalculator(this);
+                    for (LatLng latLng : addresses) {
+                        LinearLayout addressLayout = new LinearLayout(MainActivity.this);
+                        addressLayout.setOrientation(LinearLayout.HORIZONTAL);
+                        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT);
+                        addressLayout.setLayoutParams(layoutParams);
+
+                        TextView textView = new TextView(MainActivity.this);
+                        String address = convertLatLngToAddress(MainActivity.this, latLng.latitude, latLng.longitude);
+                        if (address != null) {
+                            textView.setText(address);
+                            // Set other attributes for textView
+                        }
+
+                        Button deleteButton = new Button(MainActivity.this);
+                        // Set attributes for deleteButton
+
+                        deleteButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                addressListLayout.removeView(addressLayout);
+                                addressesArray.remove(latLng);
+                                if (addressListLayout.getChildCount() == 0) {
+                                    giveRouteButton.setBackgroundColor(0xCCCCCC);
+                                    giveRouteButton.setEnabled(false);
+                                }
+                            }
+                        });
+
+                        addressLayout.addView(deleteButton);
+                        addressLayout.addView(textView);
+                        addressesArray.add(latLng);
+
+                        addressListLayout.addView(addressLayout);
+                    }
+
+                    if (addressListLayout.getChildCount() != 0) {
+                        giveRouteButton.setBackgroundColor(0xFFFF0000);
+                        giveRouteButton.setEnabled(true);
+                    }
+                }
+            }
 
             if (!Places.isInitialized()) {
                 Places.initialize(getApplicationContext(), "AIzaSyB2wY2x6ZthLJ0XsvsdVahEY-Iap6ryi6M");
@@ -458,33 +510,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             }
         }).start();
     };
-
-//    public void routeCalculateByNaiveAlgorithm() {
-//        progressBar.setVisibility(View.VISIBLE); // Show the spinner
-//        List<LatLng> shortestRoute = findShortestRoute(addressesArray, distanceArray);
-//        addressesArray = new ArrayList<>(shortestRoute);
-//        Log.d("mylog", "addressesArray: "+ addressesArray.get(0).latitude + " "+ addressesArray.get(0).longitude);
-//        if (addressesArray.size() > 1) {
-//            // Remove the first address since you've already reached it
-//            addressesArray.remove(0);
-//        }
-//            runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                progressBar.setVisibility(View.GONE); // Dismiss the spinner
-//            }
-//        });
-//        // Print the solution
-//        for (LatLng address : shortestRoute) {
-//            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
-//            Log.d("mylog", "naive-address: "+ stringAddress);
-//        }
-//
-//        startNavigation(addressesArray.get(0));
-//
-//
-//    }
-public void routeCalculateByNaiveAlgorithm() {
+    public void routeCalculateByNaiveAlgorithm() {
     progressBar.setVisibility(View.VISIBLE); // Show the spinner
     Log.d("mylog", "addressesArray: "+ addressesArray.get(0).latitude + " "+ addressesArray.get(0).longitude);
     addressesArray = solveTSP();
@@ -508,72 +534,6 @@ public void routeCalculateByNaiveAlgorithm() {
 
 
 }
-//    public ArrayList<LatLng> solveTSP() {
-//        ArrayList<LatLng> currentRoute = new ArrayList<>(addressesArray);
-//        //  currentRoute.add(addressesArray.get(0)); // Returning to the starting point
-//
-//        permute(1, currentRoute);
-//
-//        for (LatLng address : shortestRoute) {
-//            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
-//            Log.d("mylog", "shortest-route-naive-address: "+ stringAddress);
-//        }
-//
-//        return shortestRoute;
-//    }
-
-//    private void permute(int start, ArrayList<LatLng> route) {
-//        Log.d("mylog", "start= "+start+" route.size= "+route.size());
-//
-//        if (start == route.size() - 1) {
-//            double currentDistance = calculateRouteDistance(route);
-//            Log.d("mylog", "permute: current distance: "+currentDistance+" shortest distance: "+shortestDistance);
-//            if (currentDistance < shortestDistance) {
-//                Log.d("mylog", "currentDistance < shortestDistance ");
-//                shortestDistance = currentDistance;
-//                shortestRoute = new ArrayList<>(route);
-//            }
-//            return;
-//        }
-//
-//        for (int i = start; i < route.size() - 1; i++) {
-//            Collections.swap(route, start, i);
-//            Log.d("mylog", "permute: start= "+start+"i= "+i);
-//            permute(start + 1, route);
-//            Collections.swap(route, start, i);
-//            Log.d("mylog", "permute: start= "+start+"i= "+i);
-//
-//        }
-//    }
-
-
-//    private double calculateRouteDistance(ArrayList<LatLng> route) {
-//        double totalDistance = 0.0;
-//        for (int i = 0; i < route.size() - 1; i++) {
-//            LatLng current = route.get(i);
-//            Log.d("mylog", "calculateRouteDistance: current address "+convertLatLngToAddress(this, route.get(i).latitude, route.get(i).longitude));
-//            LatLng next = route.get(i + 1);
-//            Log.d("mylog", "calculateRouteDistance: next address "+convertLatLngToAddress(this, route.get(i+1).latitude, route.get(i+1).longitude));
-//
-//            double distance = getDistanceBetween(current, next);
-//            Log.d("mylog", "calculateRouteDistance: distance "+distance);
-//            totalDistance += distance;
-//        }
-//        Log.d("mylog", "calculateRouteDistance: totalDistance "+totalDistance);
-//
-//        return totalDistance;
-//    }
-
-//    private double getDistanceBetween(LatLng source, LatLng destination) {
-//        for (Distance d : distanceArray) {
-//            if (d.getOrigin().equals(source) && d.getDestination().equals(destination)) {
-//                return d.getDistance();
-//            }
-//        }
-//        return Double.MAX_VALUE; // Handle case when distance is not found
-//    }
-
-
     public ArrayList<LatLng> solveTSP() {
         int n = addressesArray.size();
         ArrayList<LatLng> currentRoute = new ArrayList<>(addressesArray);
@@ -681,48 +641,6 @@ public void routeCalculateByNaiveAlgorithm() {
 
 
 
-//    public static double findShortestRoute(List<LatLng> destinations, double[][] distances) {
-//
-//        public static double getDistanceBetween(LatLng origin, LatLng destination, List<Distance> distances) {
-//            for (Distance distance : distances) {
-//                if (distance.getOrigin().equals(origin) && distance.getDestination().equals(destination)) {
-//                    return distance.getDistance();
-//                }
-//            }
-//            return Double.MAX_VALUE; // Return a large value if distance not found
-//        }
-//
-//        // Helper method to generate all permutations of a list of LatLng addresses
-//        public static List<List<LatLng>> permute(List<LatLng> addresses) {
-//            List<List<LatLng>> permutations = new ArrayList<>();
-//            permuteHelper(addresses, 0, permutations);
-//            return permutations;
-//        }
-//
-//        private static void permuteHelper(List<LatLng> addresses, int start, List<List<LatLng>> result) {
-//            if (start >= addresses.size()) {
-//                result.add(new ArrayList<>(addresses));
-//                return;
-//            }
-//
-//            for (int i = start; i < addresses.size(); i++) {
-//                swap(addresses, start, i);
-//                permuteHelper(addresses, start + 1, result);
-//                swap(addresses, start, i);
-//            }
-//        }
-//
-//        private static void swap(List<LatLng> addresses, int i, int j) {
-//            LatLng temp = addresses.get(i);
-//            addresses.set(i, addresses.get(j));
-//            addresses.set(j, temp);
-//        }
-//
-//
-//
-//
-
-
     public void startNavigation(LatLng destination) {
         Log.d("MainActivity", "start navigation");
 
@@ -779,31 +697,77 @@ public void routeCalculateByNaiveAlgorithm() {
         return null;
     }
 
+
     public void saveToFirebaseHistory(ArrayList<LatLng> addressesArray) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        CollectionReference historyCollection = db.collection("routeHistory"); // Replace "routeHistory" with the desired collection name
+        CollectionReference usersCollection = db.collection("users"); // Reference the "users" collection
 
-        // Create a new document to store the addresses
+        // Create a map with the addresses array
         Map<String, Object> addressData = new HashMap<>();
-        addressData.put("addresses", addressesArray); // You can save the addresses as an array or any other suitable format
+        addressData.put("addresses", addressesArray);
 
-        historyCollection.add(addressData)
-                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
-                    @Override
-                    public void onSuccess(DocumentReference documentReference) {
-                        // Document was successfully added
-                        Log.d("Firestore", "DocumentSnapshot written with ID: " + documentReference.getId());
-                        // You can perform any further actions here if needed
+        // Check if the user's password already exists in the "users" collection
+        usersCollection.document(password).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    if (document.exists()) {
+                        // Update the existing list of LatLngs
+                        List<Map<String, Object>> existingLists = (List<Map<String, Object>>) document.get("listsOfLatLng");
+                        existingLists.add(addressData); // Add the new list of LatLngs
+
+                        // Update the 'listsOfLatLng' field in Firestore
+                        usersCollection.document(password).update("listsOfLatLng", existingLists)
+                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void aVoid) {
+                                        // Update successful
+                                        Log.d("Firestore", "Document updated with new list of LatLngs");
+                                        // You can perform any further actions here if needed
+                                    }
+                                })
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        // Handle errors
+                                        Log.e("Firestore", "Error updating document", e);
+                                    }
+                                });
+                    } else {
+                        // Create a new document for the user
+                        List<Map<String, Object>> newLists = new ArrayList<>();
+                        newLists.add(addressData); // Add the new list of LatLngs
+
+                        // Add the new document to Firestore
+                        Map<String, Object> newData = new HashMap<>();
+                        newData.put("listsOfLatLng", newLists);
+
+                        usersCollection.document(password).set(newData)
+                                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void aVoid) {
+                                        // Document created successfully
+                                        Log.d("Firestore", "New document created with list of LatLngs");
+                                        // You can perform any further actions here if needed
+                                    }
+                                })
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        // Handle errors
+                                        Log.e("Firestore", "Error adding document", e);
+                                    }
+                                });
                     }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        // Handle any errors that occur
-                        Log.e("Firestore", "Error adding document", e);
-                    }
-                });
+                } else {
+                    // Handle failures
+                    Log.e("Firestore", "get failed with ", task.getException());
+                }
+            }
+        });
     }
+
 
 
 }
