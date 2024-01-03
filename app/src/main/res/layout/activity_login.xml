@@ -1,67 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <EditText
-        android:id="@+id/editTextEmail"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/email"
-        android:inputType="textEmailAddress"
-        android:padding="12dp"
-    android:autofillHints="" />
-
-    <EditText
-        android:id="@+id/editTextPassword"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:hint="@string/password"
-        android:inputType="textPassword"
-        android:padding="12dp"
-    android:autofillHints="" />
+    android:background="@android:color/white">
 
     <LinearLayout
-        android:layout_marginLeft="75dp"
-        android:layout_width="wrap_content"
+        android:id="@+id/container"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:layout_centerInParent="true"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-    <Button
-        android:id="@+id/loginButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="20dp"
-        android:text="@string/login"/>
-
-        <Button
-            android:id="@+id/signUpButton"
-            android:layout_width="wrap_content"
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/sign_up"/>
-    </LinearLayout>
+            android:gravity="center"
+            android:text="Path Finder Plus"
+            android:textColor="@android:color/holo_red_dark"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/editTextEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:autofillHints=""
+            android:backgroundTint="@android:color/holo_red_dark"
+            android:hint="@string/email"
+            android:inputType="textEmailAddress"
+            android:padding="12dp"
+            android:textColor="@android:color/black" />
+
+        <EditText
+            android:id="@+id/editTextPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:autofillHints=""
+            android:backgroundTint="@android:color/holo_red_dark"
+            android:hint="@string/password"
+            android:inputType="textPassword"
+            android:padding="12dp"
+            android:textColor="@android:color/black" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/loginButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="12dp"
+
+                android:layout_weight="1"
+                android:backgroundTint="@android:color/holo_red_dark"
+                android:text="@string/login"
+                android:textColor="@android:color/white" />
+
+            <Button
+                android:id="@+id/signUpButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="12dp"
+                android:layout_weight="1"
+                android:backgroundTint="@android:color/holo_red_dark"
+                android:text="@string/sign_up"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
 
         <Button
-        android:id="@+id/existingListButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:backgroundTint="@color/light_gray"
-        android:enabled="false"
-        android:text="@string/existing_list"/>
+            android:id="@+id/existingListButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#C9A69A9A"
+            android:enabled="false"
+            android:text="@string/existing_list"
+            android:textColor="@android:color/white" />
 
-    <Button
-        android:id="@+id/newListButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:backgroundTint="@color/light_gray"
-        android:enabled="false"
-        android:text="@string/new_list"/>
-</LinearLayout>
+        <Button
+            android:id="@+id/newListButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#C9A69A9A"
+            android:enabled="false"
+            android:text="@string/new_list"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+</RelativeLayout>

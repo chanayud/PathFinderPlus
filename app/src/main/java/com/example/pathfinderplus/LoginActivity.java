@@ -1,11 +1,13 @@
 package com.example.pathfinderplus;
 
+import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -116,11 +118,37 @@ public class LoginActivity extends AppCompatActivity {
                             enableLists();
                         } else {
                             // Login failed, display an error message
-                            Toast.makeText(LoginActivity.this, "Login Failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(LoginActivity.this, "Login Failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                            showErrorDialog();
                             Log.d("mylog", "login failed: "+task.getException().getMessage());
                         }
                     }
                 });
+    }
+
+    private void showErrorDialog() {
+        // Create a custom dialog
+        Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.custom_dialog);
+
+        // Set up dialog components
+        TextView dialogText = dialog.findViewById(R.id.dialogText);
+        Button okButton = dialog.findViewById(R.id.okButton);
+
+        // Set the error message
+        dialogText.setText("Email or password is incorrect");
+
+        // Set up the OK button click listener
+        okButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Dismiss the dialog when the OK button is clicked
+                dialog.dismiss();
+            }
+        });
+
+        // Show the dialog
+        dialog.show();
     }
 
     public void enableLists(){
