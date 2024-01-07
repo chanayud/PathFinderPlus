@@ -59,7 +59,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="12dp"
-
+                android:layout_marginLeft="24dp"
                 android:layout_weight="1"
                 android:backgroundTint="@android:color/holo_red_dark"
                 android:text="@string/login"
@@ -75,8 +75,18 @@
                 android:backgroundTint="@android:color/holo_red_dark"
                 android:text="@string/sign_up"
                 android:textColor="@android:color/white" />
-        </LinearLayout>
 
+        </LinearLayout>
+        <TextView
+            android:id="@+id/forgotPasswordLink"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:text="@string/forgot_password"
+            android:textColor="@android:color/holo_red_dark"
+            android:onClick="onForgotPasswordClick"
+            android:textStyle="bold"/>
         <Button
             android:id="@+id/existingListButton"
             android:layout_width="match_parent"
