@@ -8,7 +8,10 @@ import android.content.Intent;
 import android.location.Geocoder;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.ExpandableListAdapter;
+import android.widget.ExpandableListView;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -43,14 +46,19 @@ public class HistoryList extends AppCompatActivity {
     private RecyclerView recyclerView;
     private TextView noDataTextView;
     private ArrayList<Route> routeList; // ArrayList to hold routes
+    List<String> expandableTitleList;
+    ExpandableListView expandableListView;
+    ExpandableListAdapter expandableListAdapter;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_history_list);
 
-        recyclerView = findViewById(R.id.recyclerView);
-        noDataTextView = findViewById(R.id.noDataTextView);
+        expandableListView = (ExpandableListView) findViewById(R.id.expandableListViewSample);
+
 
         String password = getIntent().getStringExtra("PASSWORD_EXTRA");
         routeList = new ArrayList<>();
@@ -76,8 +84,8 @@ public class HistoryList extends AppCompatActivity {
                                     double latitude = firstAddress.get("latitude");
                                     double longitude = firstAddress.get("longitude");
 
-                                    String firstAddressTitle = convertLatLngToAddress(HistoryList.this, latitude, longitude);
-                                    route.setTitle(firstAddressTitle); // Set the first address as the title for the route
+                                    Object title =  item.get("title");
+                                    route.setTitle(title.toString()); // Set the first address as the title for the route
 
                                     ArrayList<LatLng> addresses = new ArrayList<>();
                                     for (HashMap<String, Double> latLngMap : latLngList) {
@@ -93,27 +101,69 @@ public class HistoryList extends AppCompatActivity {
                     }
 
                     if (!routeList.isEmpty()) {
-                        CustomAdapter adapter = new CustomAdapter(HistoryList.this, routeList);
-                        recyclerView.setLayoutManager(new LinearLayoutManager(HistoryList.this));
-                        recyclerView.setAdapter(adapter);
-                        recyclerView.setVisibility(RecyclerView.VISIBLE);
-                        noDataTextView.setVisibility(TextView.GONE);
-                        adapter.setOnItemClickListener(new CustomAdapter.OnItemClickListener() {
-                            @Override
-                            public void onItemClick(int position) {
-                                // Handle item click here
-                                Route clickedRoute = routeList.get(position);
+                        HashMap<String, List<String>> expandableDetailList = ExpandableListDataItems.getData(routeList, HistoryList.this);
+                        expandableTitleList = new ArrayList<String>(expandableDetailList.keySet());
+                        expandableListAdapter = new CustomizedExpandableListAdapter(HistoryList.this, expandableTitleList, expandableDetailList);
+                        expandableListView.setAdapter(expandableListAdapter);
 
-                                // Create an Intent to pass the list of addresses back to MainActivity
-                                Intent intent = new Intent(HistoryList.this, MainActivity.class);
-                                intent.putExtra("addresses", clickedRoute.getAddresses()); // Pass addresses
-                                startActivity(intent);
+                        // This method is called when the group is expanded
+                        expandableListView.setOnGroupExpandListener(new ExpandableListView.OnGroupExpandListener() {
+                            @Override
+                            public void onGroupExpand(int groupPosition) {
+                                Toast.makeText(getApplicationContext(), expandableTitleList.get(groupPosition) + " List Expanded.", Toast.LENGTH_SHORT).show();
                             }
                         });
-                    } else {
-                        recyclerView.setVisibility(RecyclerView.GONE);
-                        noDataTextView.setVisibility(TextView.VISIBLE);
+
+                        // This method is called when the group is collapsed
+                        expandableListView.setOnGroupCollapseListener(new ExpandableListView.OnGroupCollapseListener() {
+                            @Override
+                            public void onGroupCollapse(int groupPosition) {
+                                Toast.makeText(getApplicationContext(), expandableTitleList.get(groupPosition) + " List Collapsed.", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+
+                        // This method is called when the child in any group is clicked
+                        // via a toast method, it is shown to display the selected child item as a sample
+                        // we may need to add further steps according to the requirements
+                        expandableListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
+                            @Override
+                            public boolean onChildClick(ExpandableListView parent, View v,
+                                                        int groupPosition, int childPosition, long id) {
+                                List<String> addresses = expandableDetailList.get(expandableTitleList.get(groupPosition));
+
+                                Intent intent = new Intent(HistoryList.this, MainActivity.class);
+                                intent.putExtra("addresses", new ArrayList<>(addresses)); // Pass addresses
+                                intent.putExtra("PASSWORD_EXTRA", password); // Pass password
+                                startActivity(intent);
+
+
+                                return false;
+                            }
+                        });
                     }
+
+//                        CustomAdapter adapter = new CustomAdapter(HistoryList.this, routeList);
+//                        recyclerView.setLayoutManager(new LinearLayoutManager(HistoryList.this));
+//                        recyclerView.setAdapter(adapter);
+//                        recyclerView.setVisibility(RecyclerView.VISIBLE);
+//                        noDataTextView.setVisibility(TextView.GONE);
+//                        adapter.setOnItemClickListener(new CustomAdapter.OnItemClickListener() {
+//                            @Override
+//                            public void onItemClick(int position) {
+//                                // Handle item click here
+//                                Route clickedRoute = routeList.get(position);
+//
+//                                // Create an Intent to pass the list of addresses back to MainActivity
+//                                Intent intent = new Intent(HistoryList.this, MainActivity.class);
+//                                intent.putExtra("addresses", clickedRoute.getAddresses()); // Pass addresses
+//                                intent.putExtra("PASSWORD_EXTRA", password); // Pass password
+//                                startActivity(intent);
+//                            }
+//                        });
+//                    } else {
+//                        recyclerView.setVisibility(RecyclerView.GONE);
+//                        noDataTextView.setVisibility(TextView.VISIBLE);
+
                 } else {
                     Toast.makeText(HistoryList.this, "Document does not exist", Toast.LENGTH_SHORT).show();
                 }

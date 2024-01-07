@@ -38,9 +38,7 @@ public class LoginActivity extends AppCompatActivity {
         emailEditText = findViewById(R.id.editTextEmail);
         passwordEditText = findViewById(R.id.editTextPassword);
         Button loginButton = findViewById(R.id.loginButton);
-        newListButton = findViewById(R.id.newListButton);
         Button signUpButton = findViewById(R.id.signUpButton);
-        existingList = findViewById(R.id.existingListButton);
 
 
         loginButton.setOnClickListener(new View.OnClickListener() {
@@ -65,7 +63,9 @@ public class LoginActivity extends AppCompatActivity {
                                 if (task.isSuccessful()) {
                                     // Sign-up success
                                     Toast.makeText(LoginActivity.this, "Sign-up successful", Toast.LENGTH_SHORT).show();
-                                    enableLists();
+                                    Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                                    intent.putExtra("PASSWORD_EXTRA", password);
+                                    startActivity(intent);
                                 } else {
                                     // Sign-up failed
                                     Toast.makeText(LoginActivity.this, "Sign-up failed", Toast.LENGTH_SHORT).show();
@@ -74,35 +74,7 @@ public class LoginActivity extends AppCompatActivity {
                         });
             }
         });
-        newListButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                intent.putExtra("PASSWORD_EXTRA", password);
-                startActivity(intent);
-
-                // Show a toast message (optional)
-                Toast.makeText(LoginActivity.this, "Create a new list", Toast.LENGTH_SHORT).show();
-            }
-        });
-        existingList.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(LoginActivity.this, HistoryList.class);
-                intent.putExtra("PASSWORD_EXTRA", password);
-                startActivity(intent);
-
-                // Show a toast message (optional)
-                Toast.makeText(LoginActivity.this, "retrieving list from history", Toast.LENGTH_SHORT).show();
-
-            }
-
-        });
-
-
-
     }
-    
 
     private void loginUser() {
         Log.d("mylog", "loginUser: ");
@@ -115,7 +87,9 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             Toast.makeText(LoginActivity.this, "Login Successful", Toast.LENGTH_SHORT).show();
-                            enableLists();
+                            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                            intent.putExtra("PASSWORD_EXTRA", password);
+                            startActivity(intent);
                         } else {
                             // Login failed, display an error message
                             //Toast.makeText(LoginActivity.this, "Login Failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
@@ -149,12 +123,5 @@ public class LoginActivity extends AppCompatActivity {
 
         // Show the dialog
         dialog.show();
-    }
-
-    public void enableLists(){
-        newListButton.setBackgroundColor(0xFFFF0000);
-        newListButton.setEnabled(true);
-        existingList.setBackgroundColor(0xFFFF0000);
-        existingList.setEnabled(true);
     }
 }

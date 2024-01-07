@@ -17,4 +17,5 @@
     <string name="login_failed">"Login failed"</string>
     <string name="no_data_available">No data available</string>
     <string name="title_activity_lat_lng_adapter">LatLngAdapter</string>
+    <string name="enter_an_address">Enter an address</string>
 </resources>

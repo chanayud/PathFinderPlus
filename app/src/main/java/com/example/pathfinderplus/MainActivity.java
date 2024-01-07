@@ -13,19 +13,23 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.InputType;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -83,6 +87,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     public double shortestDistance = Double.MAX_VALUE;
     public ArrayList<LatLng> shortestRoute = new ArrayList<>();
     private String password;
+    private Button existingList;
 
 
     com.google.android.gms.location.LocationCallback locationCallback;
@@ -102,6 +107,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         addressListLayout = findViewById(R.id.addressListLayoutID);
         addAddressButton = findViewById(R.id.saveAddressButtonID);
         giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
+        existingList = findViewById(R.id.existingList);
         Intent intent = getIntent();
         distanceCalculator = new DistanceCalculator(this);
         if (intent != null && "START_NAVIGATION".equals(intent.getAction())) {
@@ -115,13 +121,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             }
         } else {
             if (intent != null) {
-                ArrayList<LatLng> addresses = intent.getParcelableArrayListExtra("addresses");
+                ArrayList<String> addresses = intent.getStringArrayListExtra("addresses");
                 if (addresses != null && !addresses.isEmpty()) {
                     addressListLayout.removeAllViews();
                     addressesArray.clear();
-                    for (LatLng latLng : addresses) {
-                        chosenAddressCoordinates = latLng;
-                        String address = convertLatLngToAddress(this, latLng.latitude, latLng.longitude);
+                    for (String address : addresses) {
+                        chosenAddressCoordinates = getLatLngFromAddress(this, address);
                         addView(address);
                     }
                 }
@@ -170,6 +175,16 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     addView(chosenAddress);
                 }
             });
+            existingList.setOnClickListener(new View.OnClickListener(){
+                @Override
+                public void onClick(View view) {
+                    Intent intent = new Intent(MainActivity.this, HistoryList.class);
+                    intent.putExtra("PASSWORD_EXTRA", password);
+                    startActivity(intent);
+
+                }
+
+            });
 
 
             giveRouteButton.setOnClickListener(new View.OnClickListener() {
@@ -184,8 +199,37 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     builder.setPositiveButton("כן", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            // User clicked "Yes," so save the address list to Firebase history
-                            saveToFirebaseHistory(addressesArray);
+                            AlertDialog.Builder titleBuilder = new AlertDialog.Builder(MainActivity.this);
+                            titleBuilder.setTitle("נא תן כותרת למסלול שלך");
+
+                            // Set up the input
+                            final EditText input = new EditText(MainActivity.this);
+                            input.setInputType(InputType.TYPE_CLASS_TEXT);
+                            titleBuilder.setView(input);
+
+                            // Set up the buttons for the title dialog
+                            titleBuilder.setPositiveButton("אישור", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    String title = input.getText().toString().trim();
+                                    // Check if title is not empty before saving
+                                    if (!title.isEmpty()) {
+                                        // Save the address list to Firebase history with the obtained title
+                                        saveToFirebaseHistory(addressesArray, title);
+                                    } else {
+                                        Toast.makeText(MainActivity.this, "נא להזין כותרת", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+                            });
+                            titleBuilder.setNegativeButton("ביטול", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.cancel();
+                                }
+                            });
+
+                            // Show the title dialog
+                            titleBuilder.show();
                         }
                     });
 
@@ -617,12 +661,13 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     }
 
 
-    public void saveToFirebaseHistory(ArrayList<LatLng> addressesArray) {
+    public void saveToFirebaseHistory(ArrayList<LatLng> addressesArray, String title) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         CollectionReference usersCollection = db.collection("users"); // Reference the "users" collection
 
-        // Create a map with the addresses array
+        // Create a map with the addresses array and title
         Map<String, Object> addressData = new HashMap<>();
+        addressData.put("title", title);
         addressData.put("addresses", addressesArray);
 
         // Check if the user's password already exists in the "users" collection
@@ -686,8 +731,24 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             }
         });
     }
+    // Function to convert an address string to LatLng coordinates
+    public LatLng getLatLngFromAddress(Context context, String address) {
+        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocationName(address, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                double latitude = addresses.get(0).getLatitude();
+                double longitude = addresses.get(0).getLongitude();
+                return new LatLng(latitude, longitude);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
-public void addView(String chosenAddress){
+
+    public void addView(String chosenAddress){
     LinearLayout addressLayout = new LinearLayout(MainActivity.this);
     addressLayout.setOrientation(LinearLayout.HORIZONTAL);
     LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(

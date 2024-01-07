@@ -77,24 +77,5 @@
                 android:textColor="@android:color/white" />
         </LinearLayout>
 
-        <Button
-            android:id="@+id/existingListButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="#C9A69A9A"
-            android:enabled="false"
-            android:text="@string/existing_list"
-            android:textColor="@android:color/white" />
-
-        <Button
-            android:id="@+id/newListButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="#C9A69A9A"
-            android:enabled="false"
-            android:text="@string/new_list"
-            android:textColor="@android:color/white" />
     </LinearLayout>
 </RelativeLayout>
