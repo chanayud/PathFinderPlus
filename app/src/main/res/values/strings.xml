@@ -1,11 +1,11 @@
 <resources>
     <string name="app_name">PathFinderPlus</string>
-    <string name="email">Email</string>
-    <string name="password">Password</string>
-    <string name="login">Login</string>
+    <string name="email">אמייל</string>
+    <string name="password">סיסמה</string>
+    <string name="login">כניסה</string>
     <string name="new_list">New List</string>
     <string name="existing_list">existing list</string>
-    <string name="sign_up">Sign Up</string>
+    <string name="sign_up">משתמש חדש</string>
     <string name="title_activity_login2">LoginActivity2</string>
     <string name="prompt_email">Email</string>
     <string name="prompt_password">Password</string>
@@ -17,5 +17,9 @@
     <string name="login_failed">"Login failed"</string>
     <string name="no_data_available">No data available</string>
     <string name="title_activity_lat_lng_adapter">LatLngAdapter</string>
-    <string name="enter_an_address">Enter an address</string>
+    <string name="confirm_password">אמת סיסמה</string>
+    <string name="enter">כניסה</string>
+    <string name="reset_password">איפוס סיסמה</string>
+    <string name="enter_your_email">אימייל</string>
+    <string name="forgot_password">שכחתי סיסמה</string>
 </resources>
