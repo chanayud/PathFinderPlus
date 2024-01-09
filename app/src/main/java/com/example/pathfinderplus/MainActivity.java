@@ -86,7 +86,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     public static Intent serviceIntent;
     public double shortestDistance = Double.MAX_VALUE;
     public ArrayList<LatLng> shortestRoute = new ArrayList<>();
-    private String password;
+    private String email;
     private Button existingList;
 
 
@@ -100,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        password = getIntent().getStringExtra("PASSWORD_EXTRA");
+        email = getIntent().getStringExtra("EMAIL_ADDRESS");
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         setContentView(R.layout.activity_main);
         progressBar = findViewById(R.id.progressBar);
@@ -179,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 @Override
                 public void onClick(View view) {
                     Intent intent = new Intent(MainActivity.this, HistoryList.class);
-                    intent.putExtra("PASSWORD_EXTRA", password);
+                    intent.putExtra("EMAIL_ADDRESS", email);
                     startActivity(intent);
 
                 }
@@ -671,7 +671,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         addressData.put("addresses", addressesArray);
 
         // Check if the user's password already exists in the "users" collection
-        usersCollection.document(password).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+        usersCollection.document(email).get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
             @Override
             public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                 if (task.isSuccessful()) {
@@ -682,7 +682,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         existingLists.add(addressData); // Add the new list of LatLngs
 
                         // Update the 'listsOfLatLng' field in Firestore
-                        usersCollection.document(password).update("listsOfLatLng", existingLists)
+                        usersCollection.document(email).update("listsOfLatLng", existingLists)
                                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                                     @Override
                                     public void onSuccess(Void aVoid) {
@@ -707,7 +707,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         Map<String, Object> newData = new HashMap<>();
                         newData.put("listsOfLatLng", newLists);
 
-                        usersCollection.document(password).set(newData)
+                        usersCollection.document(email).set(newData)
                                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                                     @Override
                                     public void onSuccess(Void aVoid) {

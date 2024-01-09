@@ -60,11 +60,11 @@ public class HistoryList extends AppCompatActivity {
         expandableListView = (ExpandableListView) findViewById(R.id.expandableListViewSample);
 
 
-        String password = getIntent().getStringExtra("PASSWORD_EXTRA");
+        String email = getIntent().getStringExtra("EMAIL_ADDRESS");
         routeList = new ArrayList<>();
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        DocumentReference docRef = db.collection("users").document(password);
+        DocumentReference docRef = db.collection("users").document(email);
 
         docRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
             @Override
@@ -133,7 +133,7 @@ public class HistoryList extends AppCompatActivity {
 
                                 Intent intent = new Intent(HistoryList.this, MainActivity.class);
                                 intent.putExtra("addresses", new ArrayList<>(addresses)); // Pass addresses
-                                intent.putExtra("PASSWORD_EXTRA", password); // Pass password
+                                intent.putExtra("EMAIL_ADDRESS", email); // Pass email
                                 startActivity(intent);
 
 

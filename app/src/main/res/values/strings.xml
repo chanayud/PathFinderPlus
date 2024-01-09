@@ -22,4 +22,6 @@
     <string name="reset_password">איפוס סיסמה</string>
     <string name="enter_your_email">אימייל</string>
     <string name="forgot_password">שכחתי סיסמה</string>
+    <string name="enter_an_address">הכנס כתובת</string>
+
 </resources>
