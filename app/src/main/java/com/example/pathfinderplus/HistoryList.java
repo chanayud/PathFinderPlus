@@ -3,13 +3,16 @@ package com.example.pathfinderplus;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.location.Geocoder;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ExpandableListAdapter;
 import android.widget.ExpandableListView;
 import android.widget.Toast;
@@ -49,6 +52,7 @@ public class HistoryList extends AppCompatActivity {
     List<String> expandableTitleList;
     ExpandableListView expandableListView;
     ExpandableListAdapter expandableListAdapter;
+    Button backToHomeButton;
 
 
 
@@ -58,6 +62,15 @@ public class HistoryList extends AppCompatActivity {
         setContentView(R.layout.activity_history_list);
 
         expandableListView = (ExpandableListView) findViewById(R.id.expandableListViewSample);
+        backToHomeButton = findViewById(R.id.backToHomeButton);
+        backToHomeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(HistoryList.this, MainActivity.class);
+                startActivity(intent);
+
+            }
+        });
 
 
         String email = getIntent().getStringExtra("EMAIL_ADDRESS");
@@ -165,7 +178,19 @@ public class HistoryList extends AppCompatActivity {
 //                        noDataTextView.setVisibility(TextView.VISIBLE);
 
                 } else {
-                    Toast.makeText(HistoryList.this, "Document does not exist", Toast.LENGTH_SHORT).show();
+                    AlertDialog.Builder builder = new AlertDialog.Builder(HistoryList.this);
+                    builder.setTitle("לא נמצא מידע");
+                    builder.setMessage("רשימת ההיסטוריה שלך ריקה");
+                    builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            Intent intent = new Intent(HistoryList.this, MainActivity.class);
+                            intent.putExtra("EMAIL_ADDRESS", email); // Pass email
+                            startActivity(intent);
+                        }
+                    });
+
+                    AlertDialog dialog = builder.create();
+                    dialog.show();
                 }
             }
         }).addOnFailureListener(new OnFailureListener() {

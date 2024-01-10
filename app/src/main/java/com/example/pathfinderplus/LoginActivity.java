@@ -128,6 +128,7 @@ public class LoginActivity extends AppCompatActivity {
                                             Toast.makeText(LoginActivity.this, "Sign-up successful", Toast.LENGTH_SHORT).show();
                                             Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                                             intent.putExtra("EMAIL_ADDRESS", email);
+                                            intent.putExtra("IS_NEW_USER", true);
                                             startActivity(intent);
                                         } else {
                                             // Sign-up failed
@@ -248,6 +249,7 @@ public class LoginActivity extends AppCompatActivity {
                             Toast.makeText(LoginActivity.this, "Login Successful", Toast.LENGTH_SHORT).show();
                             Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                             intent.putExtra("EMAIL_ADDRESS", email);
+                            intent.putExtra("IS_NEW_USER", false);
                             startActivity(intent);
                         } else {
                             try {

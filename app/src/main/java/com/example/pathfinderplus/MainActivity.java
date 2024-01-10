@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -19,6 +20,8 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.provider.Settings;
 import android.text.InputType;
 import android.util.Log;
@@ -101,6 +104,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         email = getIntent().getStringExtra("EMAIL_ADDRESS");
+        boolean isNewUser = getIntent().getBooleanExtra("IS_NEW_USER", false);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         setContentView(R.layout.activity_main);
         progressBar = findViewById(R.id.progressBar);
@@ -108,13 +112,19 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         addAddressButton = findViewById(R.id.saveAddressButtonID);
         giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
         existingList = findViewById(R.id.existingList);
+        if(isNewUser)
+            existingList.setEnabled(false);
         Intent intent = getIntent();
         distanceCalculator = new DistanceCalculator(this);
         if (intent != null && "START_NAVIGATION".equals(intent.getAction())) {
             Log.d("MainActivity", "stop service here");
             stopService(serviceIntent);
             if(addressesArray.size()<5){
+                if(addressesArray.size()>1)
                 routeCalculateByNaiveAlgorithm();
+                else {
+                    finishRoute();
+                }
             }
             else {
                 routeCalculateBySimulatedAnealing();
@@ -216,6 +226,9 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                                     if (!title.isEmpty()) {
                                         // Save the address list to Firebase history with the obtained title
                                         saveToFirebaseHistory(addressesArray, title);
+
+                                        // Request permissions and start navigation
+                                        requestPermissions();
                                     } else {
                                         Toast.makeText(MainActivity.this, "נא להזין כותרת", Toast.LENGTH_SHORT).show();
                                     }
@@ -224,12 +237,23 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                             titleBuilder.setNegativeButton("ביטול", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
-                                    dialog.cancel();
+                                    // Start navigation without saving the route to Firestore
+                                    requestPermissions();
                                 }
                             });
 
                             // Show the title dialog
-                            titleBuilder.show();
+                            AlertDialog titleDialog = titleBuilder.create();
+                            titleDialog.show();
+
+                            // You can set a listener to the dialog's dismissal to manage navigation accordingly
+                            titleDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                                @Override
+                                public void onDismiss(DialogInterface dialog) {
+                                    // This code will execute when the dialog is dismissed
+                                    // For example, you can handle navigation cancellation here
+                                }
+                            });
                         }
                     });
 
@@ -237,13 +261,14 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             dialog.dismiss();
+                            requestPermissions();
+
                         }
                     });
 
                     // Create and show the dialog
                     AlertDialog dialog = builder.create();
                     dialog.show();
-                    requestPermissions();
                 }
             });
         }
@@ -294,6 +319,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
     }
     public void addCurrentLocation() {
+        progressBar.setVisibility(View.VISIBLE); // Show the ProgressBar
         if (!isLocationEnabled()) {
             Log.d("MainActivity", "location disabled");
             promptEnableLocation();
@@ -354,10 +380,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                             }
 
                         }
+
                     }
 
 
                 };
+                progressBar.setVisibility(View.GONE);
                 startLocationUpdates(locationRequest, locationCallback);
 
             }
@@ -797,5 +825,28 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     }
 
 }
+    private void finishRoute() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("סיימת את המסלול!");
+        builder.setMessage("סיימת את המסלול!\nהאפליקציה תיסגר בעוד מספר שניות.");
+        builder.setCancelable(false);
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+        HandlerThread handlerThread = new HandlerThread("CloseAppThread");
+        handlerThread.start();
+
+        Handler handler = new Handler(handlerThread.getLooper());
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                dialog.dismiss();
+                finishAndRemoveTask(); // Close all activities in the task and remove the task
+                handlerThread.quitSafely(); // Quit the handler thread
+            }
+        }, 5000); // 5000 milliseconds = 5 seconds
+    }
+
 
 }
