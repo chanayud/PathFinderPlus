@@ -385,7 +385,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
 
                 };
-                progressBar.setVisibility(View.GONE);
                 startLocationUpdates(locationRequest, locationCallback);
 
             }
@@ -464,25 +463,8 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
              //   addressesArray.clear();
                 addressesArray = new ArrayList<>(solution);
                 Log.d("mylog", "addressesArray: "+ addressesArray.get(0).latitude + " "+ addressesArray.get(0).longitude);
-                if (addressesArray.size() > 1) {
                     // Remove the first address since you've already reached it
                     addressesArray.remove(0);
-                }
-             else {
-                // Display a dialog message indicating arrival at all destinations
-                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                builder.setMessage("You have arrived at all of your destinations!")
-                        .setCancelable(false)
-                        .setPositiveButton("OK", (dialog, id) -> {
-                            // Close the dialog and stop the app or handle further actions
-                            dialog.dismiss();
-                          //  stopApp();
-                        });
-
-                AlertDialog alert = builder.create();
-                alert.show();
-
-            }
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -502,85 +484,141 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         }).start();
     };
     public void routeCalculateByNaiveAlgorithm() {
-    progressBar.setVisibility(View.VISIBLE); // Show the spinner
-    Log.d("mylog", "addressesArray: "+ addressesArray.get(0).latitude + " "+ addressesArray.get(0).longitude);
-    addressesArray = solveTSP();
-    // Print the solution
-    for (LatLng address : addressesArray) {
-        String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
-        Log.d("mylog", "naive-address: "+ stringAddress);
+        progressBar.setVisibility(View.VISIBLE); // Show the spinner
+        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
+
+        addressesArray = solveTSPnew();
+        // Print the solution
+        for (LatLng address : addressesArray) {
+            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+            Log.d("mylog", "naive-address: " + stringAddress);
+        }
+        if (addressesArray.size() > 1) {
+            // Remove the first address since you've already reached it
+            addressesArray.remove(0);
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressBar.setVisibility(View.GONE); // Dismiss the spinner
+            }
+        });
+
+        startNavigation(addressesArray.get(0));
     }
-    if (addressesArray.size() > 1) {
-        // Remove the first address since you've already reached it
+
+    public ArrayList<LatLng> solveTSPnew() {
+        LatLng sourceAddress = addressesArray.get(0);
         addressesArray.remove(0);
+        List<ArrayList<LatLng>> permutations = generatePermutations(addressesArray, sourceAddress);
+        double shortsetDistance = Integer.MAX_VALUE;
+        double tempDistance;
+        ArrayList<LatLng> resultRoute = new ArrayList<>();
+        for(ArrayList<LatLng> permutation : permutations){
+            tempDistance = calculateRouteDistance(permutation);
+            if(tempDistance<shortsetDistance){
+                shortsetDistance = tempDistance;
+                resultRoute = permutation;
+            }
+        }
+        return resultRoute;
+
     }
-    runOnUiThread(new Runnable() {
-        @Override
-        public void run() {
-            progressBar.setVisibility(View.GONE); // Dismiss the spinner
+
+    public static List<ArrayList<LatLng>> generatePermutations(ArrayList<LatLng> addressesArray, LatLng sourceAddress) {
+        List<ArrayList<LatLng>> result = new ArrayList<>();
+        generatePermutationsHelper(addressesArray, 0, result, sourceAddress);
+        return result;
+    }
+
+    private static void generatePermutationsHelper(ArrayList<LatLng> array, int index, List<ArrayList<LatLng>> result, LatLng sourceAddress) {
+        if (index == array.size() - 1) {
+            // We reached the end of the array, add a copy to the result
+            ArrayList<LatLng> resultArray = new ArrayList<>(array);
+            resultArray.add(0, sourceAddress);
+            result.add(resultArray);
+            return;
         }
-    });
 
-    startNavigation(addressesArray.get(0));
+        for (int i = index; i < array.size(); i++) {
+            // Swap elements at index and i
+            LatLng temp = array.get(index);
+            array.set(index, array.get(i));
+            array.set(i, temp);
+
+            // Recursively generate permutations for the remaining elements
+            generatePermutationsHelper(array, index + 1, result, sourceAddress);
+
+            // Undo the swap to backtrack
+            temp = array.get(index);
+            array.set(index, array.get(i));
+            array.set(i, temp);
+        }
+    }
 
 
-}
-    public ArrayList<LatLng> solveTSP() {
+    public void solveTSP() {
         int n = addressesArray.size();
-        ArrayList<LatLng> currentRoute = new ArrayList<>(addressesArray);
+        LatLng firstAddress = addressesArray.get(0);
+        Log.d("distance", "firstAddress: "+convertLatLngToAddress(this, firstAddress.latitude, firstAddress.longitude));
 
-        int[] indices = new int[n];
+        // Find the index of the first address in the original addressesArray
+        int indexOfFirstAddress = addressesArray.indexOf(firstAddress);
+
+        // Create a list to store all possible routes
+        List<List<LatLng>> allRoutes = new ArrayList<>();
+
+        // Populate the list of lists with all possible routes starting from the first address
         for (int i = 0; i < n; i++) {
-            indices[i] = i;
+            List<LatLng> currentRoute = new ArrayList<>(addressesArray.subList(i, n));
+            currentRoute.addAll(addressesArray.subList(0, i));
+
+            // Ensure the first address remains at the start of the route
+            Collections.rotate(currentRoute, -i);
+
+            // Add the current route to the list of routes
+            allRoutes.add(new ArrayList<>(currentRoute));
         }
 
-        while (true) {
-            double currentDistance = calculateRouteDistance(currentRoute);
+        // Initialize variables to store the shortest route and distance
+        List<LatLng> shortestRoute = new ArrayList<>();
+        double shortestDistance = Double.MAX_VALUE;
 
+        // Iterate through all possible routes and calculate the length of each route
+        for (List<LatLng> route : allRoutes) {
+            double currentDistance = calculateRouteDistance(route);
+            for(LatLng address : route){
+                Log.d("currentDistance", "address: "+convertLatLngToAddress(this, address.latitude, address.longitude));
+            }
+            Log.d("distance", "currentDistance: "+currentDistance);
+
+            // Update the shortest route and distance if needed
             if (currentDistance < shortestDistance) {
                 shortestDistance = currentDistance;
-                shortestRoute = new ArrayList<>(currentRoute);
+                shortestRoute = new ArrayList<>(route);
             }
+        }
+        Log.d("distance", "shortestDistance: "+shortestDistance);
+        addressesArray.clear();
+        addressesArray = (ArrayList<LatLng>) shortestRoute;
 
-            int i = n - 1;
-            while (i > 0 && indices[i - 1] >= indices[i]) {
-                i--;
-            }
-
-            if (i <= 0) {
-                break;
-            }
-
-            int j = n - 1;
-            while (indices[j] <= indices[i - 1]) {
-                j--;
-            }
-
-            swap(indices, i - 1, j);
-
-            j = n - 1;
-            while (i < j) {
-                swap(indices, i, j);
-                i++;
-                j--;
-            }
-
-            // Rebuild currentRoute using indices
-            ArrayList<LatLng> tempRoute = new ArrayList<>();
-            for (int index : indices) {
-                tempRoute.add(addressesArray.get(index));
-            }
-            currentRoute = tempRoute;
+        // Print the solution
+        for (LatLng address : shortestRoute) {
+            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+            Log.d("mylog", "address: " + stringAddress);
         }
 
-        // Ensure the first destination remains at the start of the route
-        ArrayList<LatLng> finalRoute = new ArrayList<>(shortestRoute);
-        int indexOfFirstDestination = finalRoute.indexOf(addressesArray.get(0));
-        Collections.rotate(finalRoute, -indexOfFirstDestination);
+        // Remove the first address since you've already reached it
+        shortestRoute.remove(0);
 
-        Log.d("mylog", "Shortest Route: " + finalRoute);
-        Log.d("mylog", "Shortest Distance: " + shortestDistance);
-        return finalRoute;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressBar.setVisibility(View.GONE); // Dismiss the spinner
+            }
+        });
+
+        startNavigation(shortestRoute.get(0));
     }
 
     private void swap(int[] arr, int i, int j) {
@@ -589,21 +627,21 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         arr[j] = temp;
     }
 
-    private double calculateRouteDistance(ArrayList<LatLng> route) {
+    private double calculateRouteDistance(List<LatLng> route) {
         double totalDistance = 0.0;
         for (int i = 0; i < route.size() - 1; i++) {
             LatLng current = route.get(i);
-            Log.d("mylog", "current: " + convertLatLngToAddress(this,current.latitude, current.longitude));
+            Log.d("distance", "current: " + convertLatLngToAddress(this,current.latitude, current.longitude));
 
             LatLng next = route.get(i + 1);
-            Log.d("mylog", "next: " + convertLatLngToAddress(this,next.latitude, next.longitude));
+            Log.d("distance", "next: " + convertLatLngToAddress(this,next.latitude, next.longitude));
 
             int distance = getDistanceBetween(current, next);
-            Log.d("mylog", "distance: " + distance);
+            Log.d("distance", "distance: " + distance);
 
             totalDistance += distance;
         }
-        Log.d("mylog", "totalDistance: " + totalDistance);
+        Log.d("distance", "totalDistance: " + totalDistance);
 
         return totalDistance;
     }
@@ -611,12 +649,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     private int getDistanceBetween(LatLng source, LatLng destination) {
         String sourceAddress = convertLatLngToAddress(this, source.latitude, source.longitude);
         String destinationAddress = convertLatLngToAddress(this, destination.latitude, destination.longitude);
-        Log.d("mylog", "getDistanceBetween: source: "+sourceAddress+" destination: "+destinationAddress);
+        Log.d("mylog", "getDisBetween: source: "+sourceAddress+" destination: "+destinationAddress);
 
         for (Distance d : distanceArray) {
             String tempSource = convertLatLngToAddress(this, d.getOrigin().latitude, d.getOrigin().longitude);
             String tempDestination = convertLatLngToAddress(this, d.getDestination().latitude, d.getDestination().longitude);
-            Log.d("mylog", "d.getDistance: "+d.getDistance() + " tempSource: "+tempSource+" d.tempDestination: "+tempDestination);
+            Log.d("mylog", "d: "+d.getDistance() + " tempSource: "+tempSource+" d.tempDestination: "+tempDestination);
           //  if (d.getOrigin().latitude == source.latitude && d.getOrigin().longitude == source.longitude  && d.getDestination().latitude == destination.latitude && d.getDestination().longitude == destination.longitude) {
             assert tempSource != null;
             if(tempSource.equals(sourceAddress)) {
@@ -692,6 +730,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     public void saveToFirebaseHistory(ArrayList<LatLng> addressesArray, String title) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         CollectionReference usersCollection = db.collection("users"); // Reference the "users" collection
+        if(usersCollection == null){
+            Log.d("mylog", "usersCollection is null");
+        }
+        else{
+            Log.d("mylog", "usersCollection is not null");
+        }
 
         // Create a map with the addresses array and title
         Map<String, Object> addressData = new HashMap<>();
@@ -828,7 +872,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     private void finishRoute() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("סיימת את המסלול!");
-        builder.setMessage("סיימת את המסלול!\nהאפליקציה תיסגר בעוד מספר שניות.");
+        builder.setMessage("האפליקציה תיסגר בעוד מספר שניות.");
         builder.setCancelable(false);
 
         AlertDialog dialog = builder.create();
