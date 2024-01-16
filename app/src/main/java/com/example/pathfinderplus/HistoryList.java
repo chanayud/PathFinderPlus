@@ -15,6 +15,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ExpandableListAdapter;
 import android.widget.ExpandableListView;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -52,7 +53,7 @@ public class HistoryList extends AppCompatActivity {
     List<String> expandableTitleList;
     ExpandableListView expandableListView;
     ExpandableListAdapter expandableListAdapter;
-    Button backToHomeButton;
+    ImageButton backToHomeButton;
 
 
 
@@ -196,6 +197,7 @@ public class HistoryList extends AppCompatActivity {
         }).addOnFailureListener(new OnFailureListener() {
             @Override
             public void onFailure(@NonNull Exception e) {
+                Log.e("mylog", "onFailure: e", e);
                 Toast.makeText(HistoryList.this, "Failed to retrieve data", Toast.LENGTH_SHORT).show();
             }
         });

@@ -81,10 +81,15 @@ public class LoginActivity extends AppCompatActivity {
         signUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showSignUpDialog();
+                // Get the email and password values from the main page
+                String email = emailEditText.getText().toString().trim();
+                String password = passwordEditText.getText().toString().trim();
+
+                // Call the showSignUpDialog method with the email and password values
+                showSignUpDialog(email, password);
             }
 
-            private void showSignUpDialog() {
+            private void showSignUpDialog(String email, String password) {
                 // Create a custom layout for the sign-up dialog
                 View dialogView = getLayoutInflater().inflate(R.layout.custom_sign_up_dialog, null);
 
@@ -94,10 +99,13 @@ public class LoginActivity extends AppCompatActivity {
                 EditText confirmPasswordEditText = dialogView.findViewById(R.id.confirmPasswordEditText);
                 Button enterButton = dialogView.findViewById(R.id.enterButton);
 
+                emailEditText.setText(email);
+                passwordEditText.setText(password);
+
                 // Build the dialog
                 AlertDialog.Builder builder = new AlertDialog.Builder(LoginActivity.this);
                 builder.setView(dialogView);
-                builder.setTitle("Sign Up");
+                builder.setTitle("משתמש חדש");
 
                 // Set up the button click listener
                 AlertDialog dialog = builder.create();
@@ -160,24 +168,25 @@ public class LoginActivity extends AppCompatActivity {
         forgotPasswordLink.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showForgotPasswordDialog();
+                String email = emailEditText.getText().toString().trim();
+                showForgotPasswordDialog(email);
             }
         });
 
 
     }
-    private void showForgotPasswordDialog() {
+    private void showForgotPasswordDialog(String email) {
         // Create a custom layout for the forgot password dialog
         View dialogView = getLayoutInflater().inflate(R.layout.custom_forgot_password_dialog, null);
 
         // Initialize views from the custom layout
         EditText emailEditText = dialogView.findViewById(R.id.forgotPasswordEmailEditText);
         Button resetPasswordButton = dialogView.findViewById(R.id.resetPasswordButton);
-
+        emailEditText.setText(email);
         // Build the dialog
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setView(dialogView);
-        builder.setTitle("Forgot Password");
+        builder.setTitle("שכחתי סיסמה");
 
         // Set up the button click listener
         AlertDialog dialog = builder.create();
