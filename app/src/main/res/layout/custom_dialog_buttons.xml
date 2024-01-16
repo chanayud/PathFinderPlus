@@ -1,0 +1,24 @@
+<!-- res/layout/custom_dialog_buttons.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center">
+
+    <Button
+        android:id="@+id/positiveButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@android:color/holo_red_dark"
+        android:text="כן"/>
+
+    <Button
+        android:id="@+id/negativeButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@android:color/holo_red_dark"
+        android:text="לא"/>
+
+</LinearLayout>

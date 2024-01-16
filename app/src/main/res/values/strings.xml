@@ -23,5 +23,7 @@
     <string name="enter_your_email">אימייל</string>
     <string name="forgot_password">שכחתי סיסמה</string>
     <string name="enter_an_address">הכנס כתובת</string>
+    <string name="add_address">הוסף כתובת</string>
+    <string name="careate_path">צור מסלול</string>
 
 </resources>

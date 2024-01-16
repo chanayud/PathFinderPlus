@@ -5,13 +5,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/white"
     tools:context=".MainActivity">
 
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:layout_margin="8dp"
+        android:layout_margin="16dp"
         android:visibility="gone"
         android:indeterminate="true"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -19,7 +20,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <Button
+    <ImageButton
+        android:id="@+id/existingList"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="20dp"
+        android:src="@drawable/list_new"
+        android:backgroundTint="@color/white"
+        android:scaleType="fitCenter"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+    <!--<Button
         android:id="@+id/existingList"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -27,9 +39,10 @@
         android:layout_marginTop="16dp"
         android:text="בחירה מההיסטוריה"
         android:textSize="16sp"
-        android:textColor="@color/black"
+        android:textColor="@color/white"
+        android:backgroundTint="@color/red"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />-->
 
     <fragment
         android:id="@+id/autocomplete_fragment"
@@ -75,10 +88,10 @@
             android:layout_marginTop="16dp"
             android:layout_marginEnd="100dp"
             android:layout_marginBottom="16dp"
-            android:text="הוסף כתובת"
-            android:backgroundTint="@color/red"
-            android:textColor="#FFFFFF"
-            app:cornerRadius="5dp" />
+            android:layout_weight="1"
+            android:text="@string/add_address"
+            android:backgroundTint="@android:color/holo_red_dark"
+            android:textColor="@android:color/white" />
 
         <Button
             android:id="@+id/giveMeRouteButtonID"
@@ -89,10 +102,10 @@
             android:layout_marginEnd="100dp"
             android:layout_marginBottom="16dp"
             android:backgroundTint="@color/light_gray"
-            android:text="צור מסלול"
+            android:text="@string/careate_path"
             android:enabled="false"
-            android:textColor="#FFFFFF"
-            app:cornerRadius="5dp" />
+            android:textColor="@android:color/white"
+            android:layout_weight="1" />
 
     </LinearLayout>
 

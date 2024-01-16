@@ -6,6 +6,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.TooltipCompat;
+import androidx.appcompat.widget.AppCompatImageButton;
+
+
+
 
 import android.Manifest;
 import android.app.ProgressDialog;
@@ -29,6 +35,7 @@ import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -90,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     public double shortestDistance = Double.MAX_VALUE;
     public ArrayList<LatLng> shortestRoute = new ArrayList<>();
     private String email;
-    private Button existingList;
+    private ImageButton existingList;
 
 
     com.google.android.gms.location.LocationCallback locationCallback;
@@ -112,6 +119,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         addAddressButton = findViewById(R.id.saveAddressButtonID);
         giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
         existingList = findViewById(R.id.existingList);
+        TooltipCompat.setTooltipText(existingList, "בחירה מההיסטוריה");
         if(isNewUser)
             existingList.setEnabled(false);
         Intent intent = getIntent();
@@ -183,6 +191,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 @Override
                 public void onClick(View v) {
                     addView(chosenAddress);
+                    //chosenAddress = null;
                 }
             });
             existingList.setOnClickListener(new View.OnClickListener(){
@@ -204,7 +213,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                     builder.setTitle("שמירה בהיסטוריה");
                     builder.setMessage("האם אתה רוצה לשמור את המסלול בהיסטורית המסלולים שלך?");
-
                     // Add buttons and their actions
                     builder.setPositiveButton("כן", new DialogInterface.OnClickListener() {
                         @Override
@@ -820,7 +828,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     addressListLayout.addView(addressLayout);
 
     if (addressListLayout.getChildCount() != 0) {
-        giveRouteButton.setBackgroundColor(0xFFFF0000);
+        giveRouteButton.setBackgroundColor(0xffcc0000);
         giveRouteButton.setEnabled(true);
     }
 

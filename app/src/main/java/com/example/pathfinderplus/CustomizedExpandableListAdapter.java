@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.HashMap;
@@ -80,7 +81,7 @@ public class CustomizedExpandableListAdapter extends BaseExpandableListAdapter {
     // Gets a View that displays the given group.
     // This View is only for the group--the Views for the group's children
     // will be fetched using getChildView()
-    public View getGroupView(int listPosition, boolean isExpanded, View convertView, ViewGroup parent) {
+   /* public View getGroupView(int listPosition, boolean isExpanded, View convertView, ViewGroup parent) {
         String listTitle = (String) getGroup(listPosition);
         if (convertView == null) {
             LayoutInflater layoutInflater = (LayoutInflater) this.context.
@@ -91,7 +92,28 @@ public class CustomizedExpandableListAdapter extends BaseExpandableListAdapter {
         listTitleTextView.setTypeface(null, Typeface.BOLD);
         listTitleTextView.setText(listTitle);
         return convertView;
+    }*/
+    public View getGroupView(int listPosition, boolean isExpanded, View convertView, ViewGroup parent) {
+        String listTitle = (String) getGroup(listPosition);
+
+        if (convertView == null) {
+            LayoutInflater layoutInflater = (LayoutInflater) this.context.
+                    getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            convertView = layoutInflater.inflate(R.layout.group_item_layout, null);
+        }
+
+        TextView listTitleTextView = convertView.findViewById(R.id.groupTitle);
+        ImageView groupIcon = convertView.findViewById(R.id.groupIcon);
+
+        listTitleTextView.setTypeface(null, Typeface.BOLD);
+        listTitleTextView.setText(listTitle);
+
+        // Set your icon based on your data model, e.g., using setImageResource
+        // groupIcon.setImageResource(R.drawable.your_icon);
+
+        return convertView;
     }
+
 
     @Override
     // Indicates whether the child and group IDs are stable across changes to the underlying data.
