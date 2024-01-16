@@ -25,5 +25,6 @@
     <string name="enter_an_address">הכנס כתובת</string>
     <string name="add_address">הוסף כתובת</string>
     <string name="careate_path">צור מסלול</string>
+    <string name="history">להיסטוריה</string>
 
 </resources>

@@ -148,6 +148,11 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         addView(address);
                     }
                 }
+                ArrayList<LatLng> newRoute = intent.getParcelableArrayListExtra("NEW_ROUTE");
+                if(newRoute!=null){
+                    addressesArray = newRoute;
+                    startNavigation(addressesArray.get(0));
+                }
             }
 
             if (!Places.isInitialized()) {
@@ -191,6 +196,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 @Override
                 public void onClick(View v) {
                     addView(chosenAddress);
+                    autocompleteFragment.setText("");
                     //chosenAddress = null;
                 }
             });
