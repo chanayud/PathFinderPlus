@@ -1,5 +1,7 @@
 package com.example.pathfinderplus;
 
+import static androidx.core.app.ServiceCompat.stopForeground;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -127,16 +129,10 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         if (intent != null && "START_NAVIGATION".equals(intent.getAction())) {
             Log.d("MainActivity", "stop service here");
             stopService(serviceIntent);
-            if(addressesArray.size()<5){
                 if(addressesArray.size()>1)
-                routeCalculateByNaiveAlgorithm();
-                else {
+                    calculateDistance();
+                else
                     finishRoute();
-                }
-            }
-            else {
-                routeCalculateBySimulatedAnealing();
-            }
         } else {
             if (intent != null) {
                 ArrayList<String> addresses = intent.getStringArrayListExtra("addresses");
@@ -292,6 +288,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
     protected void onDestroy() {
         super.onDestroy();
+        stopService(serviceIntent);
         // Unregister the receiver when the activity is destroyed
         LocalBroadcastManager.getInstance(this).unregisterReceiver(myReceiver);
 
@@ -370,33 +367,15 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                             // Add the current location to the addressesArray at the first position
                             addressesArray.add(0, currentLatLng);
                             Log.d("MainActivity", "in addCurrentLocation - add to addressArray - current location: "+addressesArray.get(0));
+                            calculateDistance();
+
 
                             // Rest of your code here (distance calculation)
-                            distanceArray = new ArrayList<>();
-                            int totalAddresses = addressesArray.size();
-                            expectedApiCalls = factorial(totalAddresses) / factorial(totalAddresses - 2);
-                            Log.d("mylog", "expectedApiCalls: "+expectedApiCalls);
 
-                            for (int i = 0; i < addressesArray.size(); i++) {
-                                LatLng address1 = addressesArray.get(i);
-
-                                for (int j = 0; j < addressesArray.size(); j++) {
-                                    if(j==i)
-                                        continue;
-                                    LatLng address2 = addressesArray.get(j);
-
-                                    try {
-                                        distanceCalculator.calculateDistance(address1, address2, expectedApiCalls, MainActivity.this);
-                                    } catch (IOException e) {
-                                        Log.d("mylog", "exception: ", e);
-                                    }
-                                }
-                            }
 
                         }
 
                     }
-
 
                 };
                 startLocationUpdates(locationRequest, locationCallback);
@@ -710,7 +689,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         }
     }
 
-    private int factorial(int n) {
+    public static int factorial(int n) {
         if (n <= 1) {
             return 1;
         }
@@ -904,6 +883,29 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 handlerThread.quitSafely(); // Quit the handler thread
             }
         }, 5000); // 5000 milliseconds = 5 seconds
+    }
+
+    public void calculateDistance(){
+        distanceArray = new ArrayList<>();
+        int totalAddresses = addressesArray.size();
+        expectedApiCalls = factorial(totalAddresses) / factorial(totalAddresses - 2);
+        Log.d("mylog", "expectedApiCalls: "+expectedApiCalls);
+
+        for (int i = 0; i < addressesArray.size(); i++) {
+            LatLng address1 = addressesArray.get(i);
+
+            for (int j = 0; j < addressesArray.size(); j++) {
+                if(j==i)
+                    continue;
+                LatLng address2 = addressesArray.get(j);
+
+                try {
+                    distanceCalculator.calculateDistance(address1, address2, expectedApiCalls, MainActivity.this);
+                } catch (IOException e) {
+                    Log.d("mylog", "exception: ", e);
+                }
+            }
+        }
     }
 
 

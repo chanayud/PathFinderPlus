@@ -3,6 +3,7 @@ package com.example.pathfinderplus;
 import static com.example.pathfinderplus.MainActivity.addressesArray;
 import static com.example.pathfinderplus.MainActivity.convertLatLngToAddress;
 import static com.example.pathfinderplus.MainActivity.distanceArray;
+import static com.example.pathfinderplus.MainActivity.factorial;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -32,10 +33,13 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.gms.maps.model.LatLng;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
-public class LocationMonitoringForegroundService extends Service implements LocationListener {
+public class LocationMonitoringForegroundService extends Service implements LocationListener, GetDistanceTask.DistanceCallback{
 
     private boolean isServiceRunning = false;
 
@@ -53,12 +57,17 @@ public class LocationMonitoringForegroundService extends Service implements Loca
     private ArrayList<LatLng> newRoute;
     private Handler handler = new Handler();
     private Runnable routeCalculationRunnable;
+    int expectedApiCalls;
+    private DistanceCalculator distanceCalculator;
+
+
 
 
 
     @Override
     public void onCreate() {
         super.onCreate();
+        distanceCalculator = new DistanceCalculator(this);
 
         // Create the notification channel if running on Android Oreo (API level 26) or higher
         NotificationChannel channel = new NotificationChannel("1234", "service notification", NotificationManager.IMPORTANCE_DEFAULT);
@@ -66,43 +75,53 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         if (manager != null) {
             manager.createNotificationChannel(channel);
         }
-        routeCalculationRunnable = new Runnable() {
-            @Override
-        public void run() {
-            // Add your route calculation logic here
-            checkAndCalculateRoute();
-
-            // Schedule the next execution after 3 minutes (180,000 milliseconds)
-            handler.postDelayed(this, 180000);
-        }
-    };
-
-
-
-}
-
+//        routeCalculationRunnable = new Runnable() {
+//            @Override
+//        public void run() {
+//            // Add your route calculation logic here
+//                Log.d("mylog", "run: 3 minutes past");
+//            checkAndCalculateRoute();
+//
+//            // Schedule the next execution after 3 minutes (180,000 milliseconds)
+//            handler.postDelayed(this, 180000);
+//        }
+//    };
+    }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d("MainActivity", "onStartCommand: intent: " + intent);
         if (!isServiceRunning) {
             isServiceRunning = true;
+            Timer timer = new Timer();
 
-            // if (intent != null && intent.getAction() != null && intent.getAction().equals("START_NAVIGATION")) {
-            targetLatitude = intent.getDoubleExtra("DESTINATION_LATITUDE", 0.0);
-            targetLongitude = intent.getDoubleExtra("DESTINATION_LONGITUDE", 0.0);
-            JOB_ID = intent.getStringExtra("JOB_ID");
-            Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude + " JOB_ID: " + JOB_ID);
+            timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    Log.d("mylog", "timer is here");
+                    checkAndCalculateRoute();
+                }}, 180000 ,180000); // 60000 milliseconds = 1 minute
+
+            try{
+//            if (intent != null && intent.getAction() != null && intent.getAction().equals("START_NAVIGATION")) {
+                targetLatitude = intent.getDoubleExtra("DESTINATION_LATITUDE", 0.0);
+                targetLongitude = intent.getDoubleExtra("DESTINATION_LONGITUDE", 0.0);
+                JOB_ID = intent.getStringExtra("JOB_ID");
+                Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude + " JOB_ID: " + JOB_ID);
+            }
+            catch (Exception e){
+                Log.d("ex", "exception: " + e.getMessage());
+            }
+            handler.post(routeCalculationRunnable);
+
+
+            startLocationMonitoring();
+
+            // Create a notification to make the service a foreground service
+            createNotification();
         }
-        handler.post(routeCalculationRunnable);
+            return START_STICKY;
+        }
 
-
-        startLocationMonitoring();
-
-        // Create a notification to make the service a foreground service
-        createNotification();
-
-        return START_STICKY;
-    }
 
     private void createNotification() {
         Intent notificationIntent = new Intent(this, MainActivity.class);
@@ -166,27 +185,20 @@ public class LocationMonitoringForegroundService extends Service implements Loca
     }
 
     private void checkAndCalculateRoute() {
-        // Check the length of "AddressesArray"
-        if (addressesArray.size() > 5) {
-            // Call the method for route calculation based on conditions
-            routeCalculateBySimulatedAnealing();
-            // Check if the new route is different from the existing one
-            if (!newRoute.equals(addressesArray)) {
-                // Check if the new route is shorter
-                if (isRouteShorter(newRoute, addressesArray)) {
-                    // Notify the user and update addressesArray if needed
-                    notifyUserAndHandleNewRoute(newRoute);
-                }
-            }
-        } else {
-            // Call the method for route calculation based on conditions
-            routeCalculateByNaiveAlgorithm();
-            // Check if the new route is different from the existing one
-            if (!newRoute.equals(addressesArray)) {
-                // Check if the new route is shorter
-                if (isRouteShorter(newRoute, addressesArray)) {
-                    // Notify the user and update addressesArray if needed
-                    notifyUserAndHandleNewRoute(newRoute);
+        int totalAddresses = addressesArray.size();
+        expectedApiCalls = factorial(totalAddresses) / factorial(totalAddresses - 2);
+        for (int i = 0; i < addressesArray.size(); i++) {
+            LatLng address1 = addressesArray.get(i);
+
+            for (int j = 0; j < addressesArray.size(); j++) {
+                if(j==i)
+                    continue;
+                LatLng address2 = addressesArray.get(j);
+
+                try {
+                    distanceCalculator.calculateDistance(address1, address2, expectedApiCalls, LocationMonitoringForegroundService.this);
+                } catch (IOException e) {
+                    Log.d("mylog", "exception: ", e);
                 }
             }
         }
@@ -285,6 +297,48 @@ public class LocationMonitoringForegroundService extends Service implements Loca
     @Override
     public void onProviderDisabled(String provider) {
         // Implement if needed
+    }
+
+    @Override
+    public void onDistanceCalculated(Distance distance)
+
+    {
+        distanceArray.add(distance);
+        if (distanceArray.size() == expectedApiCalls) {
+            Log.d("mylog", "expectedApiCalls: "+expectedApiCalls);
+            // The distanceArray should contain all the responses now
+            for (int i = 0; i < distanceArray.size(); i++) {
+                // Do something with distanceArray.get(i) to process each response
+                Log.d("MYLOG", "Origin Address: " + distanceArray.get(i).getOriginAddress());
+                Log.d("MYLOG", "Destination Address: " + distanceArray.get(i).getDestinationAddress());
+                Log.d("MYLOG", "Distance: " + distanceArray.get(i).getDistance());
+
+            }
+            // Check the length of "AddressesArray"
+            if (addressesArray.size() > 5) {
+                // Call the method for route calculation based on conditions
+                routeCalculateBySimulatedAnealing();
+                // Check if the new route is different from the existing one
+                }
+             else {
+                // Call the method for route calculation based on conditions
+                routeCalculateByNaiveAlgorithm();
+            }
+                // Check if the new route is different from the existing one
+                if (!newRoute.equals(addressesArray)) {
+                    // Check if the new route is shorter
+                    if (isRouteShorter(newRoute, addressesArray)) {
+                        // Notify the user and update addressesArray if needed
+                        notifyUserAndHandleNewRoute(newRoute);
+                    }
+                }
+            }
+        }
+
+
+    @Override
+    public void onDistanceCalculationFailed(String errorMessage) {
+
     }
 
     public class LocalBinder extends Binder {
