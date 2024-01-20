@@ -1,5 +1,9 @@
 package com.example.pathfinderplus;
 
+import static com.example.pathfinderplus.MainActivity.addressesArray;
+import static com.example.pathfinderplus.MainActivity.convertLatLngToAddress;
+import static com.example.pathfinderplus.MainActivity.distanceArray;
+
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -16,13 +20,20 @@ import android.location.LocationManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.View;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.google.android.gms.maps.model.LatLng;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LocationMonitoringForegroundService extends Service implements LocationListener {
 
@@ -36,8 +47,14 @@ public class LocationMonitoringForegroundService extends Service implements Loca
     private double targetLatitude;
     private double targetLongitude;
     private String JOB_ID;
+    private static final int MAX_ADDRESS_COUNT = 5;
 
     private final IBinder binder = new LocalBinder();
+    private ArrayList<LatLng> newRoute;
+    private Handler handler = new Handler();
+    private Runnable routeCalculationRunnable;
+
+
 
     @Override
     public void onCreate() {
@@ -49,9 +66,20 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         if (manager != null) {
             manager.createNotificationChannel(channel);
         }
+        routeCalculationRunnable = new Runnable() {
+            @Override
+        public void run() {
+            // Add your route calculation logic here
+            checkAndCalculateRoute();
+
+            // Schedule the next execution after 3 minutes (180,000 milliseconds)
+            handler.postDelayed(this, 180000);
+        }
+    };
 
 
-    }
+
+}
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -65,6 +93,8 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             JOB_ID = intent.getStringExtra("JOB_ID");
             Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude + " JOB_ID: " + JOB_ID);
         }
+        handler.post(routeCalculationRunnable);
+
 
         startLocationMonitoring();
 
@@ -103,20 +133,6 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         }
     }
 
-//    private void stopLocationMonitoring() {
-//        Log.d("MainActivity", "stopLocationMonitoring: ");
-//        if (locationManager != null) {
-//            locationManager.removeUpdates(this);
-//        }
-//    }
-
-    //@Override
-//    public void onDestroy() {
-//        super.onDestroy();
-//        isServiceRunning = false;
-//        stopLocationMonitoring();
-//    }
-
     @Override
     public IBinder onBind(Intent intent) {
         return binder;
@@ -137,7 +153,6 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 
         float distanceInMeters = results[0];
         Log.d("MainActivity", "distanceInMeters: " + distanceInMeters);
-
         if (distanceInMeters < TRIGGER_DISTANCE_METERS) {
             // Trigger action (launch MainActivity)
             Log.d("MainActivity", "distanceInMeters small");
@@ -149,6 +164,34 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 
         }
     }
+
+    private void checkAndCalculateRoute() {
+        // Check the length of "AddressesArray"
+        if (addressesArray.size() > 5) {
+            // Call the method for route calculation based on conditions
+            routeCalculateBySimulatedAnealing();
+            // Check if the new route is different from the existing one
+            if (!newRoute.equals(addressesArray)) {
+                // Check if the new route is shorter
+                if (isRouteShorter(newRoute, addressesArray)) {
+                    // Notify the user and update addressesArray if needed
+                    notifyUserAndHandleNewRoute(newRoute);
+                }
+            }
+        } else {
+            // Call the method for route calculation based on conditions
+            routeCalculateByNaiveAlgorithm();
+            // Check if the new route is different from the existing one
+            if (!newRoute.equals(addressesArray)) {
+                // Check if the new route is shorter
+                if (isRouteShorter(newRoute, addressesArray)) {
+                    // Notify the user and update addressesArray if needed
+                    notifyUserAndHandleNewRoute(newRoute);
+                }
+            }
+        }
+    }
+
 
     private void notify(String jobId) {
         Log.d("MainActivity", "Navigating to the next destination");
@@ -164,20 +207,20 @@ public class LocationMonitoringForegroundService extends Service implements Loca
                 this, 0, appIntent, PendingIntent.FLAG_IMMUTABLE);
 
         // Notification channel settings
-            NotificationManager notificationManager =
-                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
-            // Create a notification channel with high importance
-            NotificationChannel channel = new NotificationChannel("5678", "destination reached notification", NotificationManager.IMPORTANCE_HIGH);
-            channel.setDescription("Channel Description");
-            channel.setShowBadge(true); // Enable badge icon for this channel
-            channel.enableLights(true);
-            channel.setLightColor(Color.RED);
-            channel.enableVibration(true);
+        // Create a notification channel with high importance
+        NotificationChannel channel = new NotificationChannel("5678", "destination reached notification", NotificationManager.IMPORTANCE_HIGH);
+        channel.setDescription("Channel Description");
+        channel.setShowBadge(true); // Enable badge icon for this channel
+        channel.enableLights(true);
+        channel.setLightColor(Color.RED);
+        channel.enableVibration(true);
 
-            if (notificationManager != null) {
-                notificationManager.createNotificationChannel(channel);
-            }
+        if (notificationManager != null) {
+            notificationManager.createNotificationChannel(channel);
+        }
 
 
         // Build the notification with a button to go back to our app
@@ -195,7 +238,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
                 .setContentTitle("Destination Reached")
                 .setContentText("You have reached your destination.")
                 .setContentIntent(appPendingIntent)
-                    .setPriority(NotificationCompat.PRIORITY_MAX) // Set notification priority to high
+                .setPriority(NotificationCompat.PRIORITY_MAX) // Set notification priority to high
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setAutoCancel(true);
 //                .setDefaults(NotificationCompat.DEFAULT_ALL); // Set default notification behaviors
@@ -203,7 +246,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 
         // For heads-up notification (requires API level 21 or above)
         //notificationBuilder.setFullScreenIntent(null, true);
-       NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(this);
+        NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(this);
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
@@ -218,7 +261,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 
 
         // Build the notification
-     //   Notification notification = notificationBuilder.build();
+        //   Notification notification = notificationBuilder.build();
 
         // Display the notification
       /*  NotificationManager notificationManager =
@@ -227,7 +270,6 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             notificationManager.notify(jobId.hashCode(), notification);
         }*/
     }
-
 
 
     @Override
@@ -250,4 +292,219 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             return LocationMonitoringForegroundService.this;
         }
     }
-}
+
+    public void routeCalculateBySimulatedAnealing() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // Execute the code in a new thread
+                Log.d("MainActivity", "newRoute.size:" + newRoute.size());
+
+                ArrayList<LatLng> solution = TSPSolver.solveTSP(addressesArray, distanceArray);
+                //   addressesArray.clear();
+                newRoute = solution;
+                Log.d("mylog", "addressesArray: " + newRoute.get(0).latitude + " " + newRoute.get(0).longitude);
+                // Remove the first address since you've already reached it
+                // addressesArray.remove(0);
+                //  startNavigation(addressesArray.get(0));
+
+
+//                // Print the solution
+//                for (LatLng address : solution) {
+//                    String stringAddress = convertLatLngToAddress(, address.latitude, address.longitude);
+//                    Log.d("mylog", "anealing-address: "+ stringAddress);
+//                }
+            }
+        }).start();
+    }
+
+    ;
+
+    public void routeCalculateByNaiveAlgorithm() {
+        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
+
+        newRoute = solveTSPnew();
+        // Print the solution
+//        for (LatLng address : newRoute) {
+//            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+//            Log.d("mylog", "naive-address: " + stringAddress);
+//        }
+//        if (addressesArray.size() > 1) {
+//            // Remove the first address since you've already reached it
+//            addressesArray.remove(0);
+//        }
+    }
+
+    private double calculateRouteDistance(List<LatLng> route) {
+        double totalDistance = 0.0;
+        for (int i = 0; i < route.size() - 1; i++) {
+            LatLng current = route.get(i);
+            Log.d("distance", "current: " + convertLatLngToAddress(this, current.latitude, current.longitude));
+
+            LatLng next = route.get(i + 1);
+            Log.d("distance", "next: " + convertLatLngToAddress(this, next.latitude, next.longitude));
+
+            int distance = getDistanceBetween(current, next);
+            Log.d("distance", "distance: " + distance);
+
+            totalDistance += distance;
+        }
+        Log.d("distance", "totalDistance: " + totalDistance);
+
+        return totalDistance;
+    }
+
+    private int getDistanceBetween(LatLng source, LatLng destination) {
+        String sourceAddress = convertLatLngToAddress(this, source.latitude, source.longitude);
+        String destinationAddress = convertLatLngToAddress(this, destination.latitude, destination.longitude);
+        Log.d("mylog", "getDisBetween: source: " + sourceAddress + " destination: " + destinationAddress);
+
+        for (Distance d : distanceArray) {
+            String tempSource = convertLatLngToAddress(this, d.getOrigin().latitude, d.getOrigin().longitude);
+            String tempDestination = convertLatLngToAddress(this, d.getDestination().latitude, d.getDestination().longitude);
+            Log.d("mylog", "d: " + d.getDistance() + " tempSource: " + tempSource + " d.tempDestination: " + tempDestination);
+            //  if (d.getOrigin().latitude == source.latitude && d.getOrigin().longitude == source.longitude  && d.getDestination().latitude == destination.latitude && d.getDestination().longitude == destination.longitude) {
+            assert tempSource != null;
+            if (tempSource.equals(sourceAddress)) {
+                assert tempDestination != null;
+                if (tempDestination.equals(destinationAddress)) {
+                    Log.d("mylog", "getDistanceBetween: " + d.getDistance());
+                    return d.getDistance();
+                }
+            }
+        }
+        return Integer.MAX_VALUE; // Handle case when distance is not found
+    }
+
+    private boolean isRouteShorter(ArrayList<LatLng> newRoute, ArrayList<LatLng> addressesArray) {
+        double newCalculation = calculateRouteDistance(newRoute);
+        double existingCalculation = calculateRouteDistance(addressesArray);
+        if (newCalculation < existingCalculation)
+            return true;
+        return false;
+    }
+
+    public ArrayList<LatLng> solveTSPnew() {
+        LatLng sourceAddress = addressesArray.get(0);
+        addressesArray.remove(0);
+        List<ArrayList<LatLng>> permutations = generatePermutations(addressesArray, sourceAddress);
+        double shortsetDistance = Integer.MAX_VALUE;
+        double tempDistance;
+        ArrayList<LatLng> resultRoute = new ArrayList<>();
+        for (ArrayList<LatLng> permutation : permutations) {
+            tempDistance = calculateRouteDistance(permutation);
+            if (tempDistance < shortsetDistance) {
+                shortsetDistance = tempDistance;
+                resultRoute = permutation;
+            }
+        }
+        return resultRoute;
+
+    }
+
+    public static List<ArrayList<LatLng>> generatePermutations(ArrayList<LatLng> addressesArray, LatLng sourceAddress) {
+        List<ArrayList<LatLng>> result = new ArrayList<>();
+        generatePermutationsHelper(addressesArray, 0, result, sourceAddress);
+        return result;
+    }
+
+    private static void generatePermutationsHelper(ArrayList<LatLng> array, int index, List<ArrayList<LatLng>> result, LatLng sourceAddress) {
+        if (index == array.size() - 1) {
+            // We reached the end of the array, add a copy to the result
+            ArrayList<LatLng> resultArray = new ArrayList<>(array);
+            resultArray.add(0, sourceAddress);
+            result.add(resultArray);
+            return;
+        }
+
+        for (int i = index; i < array.size(); i++) {
+            // Swap elements at index and i
+            LatLng temp = array.get(index);
+            array.set(index, array.get(i));
+            array.set(i, temp);
+
+            // Recursively generate permutations for the remaining elements
+            generatePermutationsHelper(array, index + 1, result, sourceAddress);
+
+            // Undo the swap to backtrack
+            temp = array.get(index);
+            array.set(index, array.get(i));
+            array.set(i, temp);
+        }
+    }
+
+    private void notifyUserAndHandleNewRoute(ArrayList<LatLng> newRoute) {
+        // Check if the new route is different from the existing addressesArray
+        showNotification("Shorter Route", "A shorter route is available. Tap to update.");
+
+        // TODO: Handle user interaction (e.g., when the user taps the notification)
+        // Launch an activity or use other UI elements to handle the user's choice
+        launchRouteUpdateActivity(newRoute);
+    }
+
+    private void launchRouteUpdateActivity(ArrayList<LatLng> newRoute) {
+        // Launch the RouteUpdateActivity with the new route data
+        Intent updateRouteIntent = new Intent(this, MainActivity.class);
+        updateRouteIntent.putParcelableArrayListExtra("NEW_ROUTE", newRoute);
+        PendingIntent updatePendingIntent = PendingIntent.getActivity(
+                this, 0, updateRouteIntent, PendingIntent.FLAG_IMMUTABLE);
+
+        // Build the notification action for updating the route
+        NotificationCompat.Action updateAction =
+                new NotificationCompat.Action.Builder(R.drawable.ic_yes,
+                        "Yes", updatePendingIntent)
+                        .build();
+
+        // Build the notification
+        Notification notification = new NotificationCompat.Builder(this, "5678")
+                .setSmallIcon(R.drawable.icons8_notification)
+                .setContentTitle("Destination Reached")
+                .setContentText("You have reached your destination.")
+                .addAction(updateAction) // Add the update action
+                .setPriority(NotificationCompat.PRIORITY_MAX) // Set notification priority to high
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setAutoCancel(true)
+                .build();
+
+        // Display the notification
+        NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(this);
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        notificationManagerCompat.notify(0, notification);
+    }
+
+    // In your RouteUpdateActivity, handle the new route in its onCreate method
+
+    private void showNotification(String title, String content) {
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "5678")
+                .setSmallIcon(R.drawable.icons8_notification)
+                .setContentTitle(title)
+                .setContentText(content)
+                .setPriority(NotificationCompat.PRIORITY_HIGH) // Set notification priority to high
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setAutoCancel(true);
+
+        NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(this);
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        notificationManagerCompat.notify(0, notificationBuilder.build());
+        }
+
+    }
+

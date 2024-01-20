@@ -31,6 +31,7 @@
             android:autofillHints=""
             android:backgroundTint="@android:color/holo_red_dark"
             android:hint="@string/email"
+            android:textDirection="ltr"
             android:inputType="textEmailAddress"
             android:padding="12dp"
             android:textColor="@android:color/black" />
