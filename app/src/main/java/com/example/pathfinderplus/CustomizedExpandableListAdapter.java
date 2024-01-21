@@ -2,12 +2,15 @@ package com.example.pathfinderplus;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.HashMap;
 import java.util.List;
@@ -104,13 +107,21 @@ public class CustomizedExpandableListAdapter extends BaseExpandableListAdapter {
 
         TextView listTitleTextView = convertView.findViewById(R.id.groupTitle);
         ImageView groupIcon = convertView.findViewById(R.id.groupIcon);
+        ImageButton garbageButton = convertView.findViewById(R.id.groupButton1);
+        ImageButton checkButton = convertView.findViewById(R.id.groupButton2);
 
         listTitleTextView.setTypeface(null, Typeface.BOLD);
         listTitleTextView.setText(listTitle);
 
         // Set your icon based on your data model, e.g., using setImageResource
-        // groupIcon.setImageResource(R.drawable.your_icon);
-
+        garbageButton.setImageResource(R.drawable.garbage);
+        garbageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d("hhhhhhh", "onClick: ");
+            }
+        });
+        checkButton.setImageResource(R.drawable.check_square);
         return convertView;
     }
 

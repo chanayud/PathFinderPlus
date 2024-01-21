@@ -78,7 +78,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     public static ArrayList<LatLng> addressesArray = new ArrayList<>();
     public static ArrayList<Distance> distanceArray = new ArrayList<>();
     private DistanceCalculator distanceCalculator;
-    private
+    private Constraint ConstraintsArray;
     String chosenAddress;
     Button addAddressButton;
     Button giveRouteButton;
@@ -840,6 +840,13 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
         clockButton.setLayoutParams(clockLayoutParams);
+
+        clockButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                
+            }
+        });
 
         // EditText for manual time input
         EditText timeEditText = new EditText(MainActivity.this);
