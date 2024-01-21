@@ -1,22 +1,16 @@
 package com.example.pathfinderplus;
 
-import static androidx.core.app.ServiceCompat.stopForeground;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.TooltipCompat;
-import androidx.appcompat.widget.AppCompatImageButton;
-
-
 
 
 import android.Manifest;
-import android.app.ProgressDialog;
+import android.app.TimePickerDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -41,6 +35,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.Status;
@@ -62,13 +57,13 @@ import com.google.android.libraries.places.api.net.PlacesClient;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -814,54 +809,109 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
 
     public void addView(String chosenAddress){
-    LinearLayout addressLayout = new LinearLayout(MainActivity.this);
-    addressLayout.setOrientation(LinearLayout.HORIZONTAL);
-    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT);
-    addressLayout.setLayoutParams(layoutParams);
+        LinearLayout addressLayout = new LinearLayout(MainActivity.this);
+        addressLayout.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        addressLayout.setLayoutParams(layoutParams);
 
-    TextView textView = new TextView(MainActivity.this);
-    if (!Objects.equals(chosenAddress, "") && chosenAddress != null) {
-        textView.setText(chosenAddress);
-        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
-        textView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, android.R.color.white));
-        textView.setPadding(16, 16, 16, 16);
-        textView.setTextDirection(View.TEXT_DIRECTION_RTL);
-    }
-
-    Button deleteButton = new Button(MainActivity.this);
-    LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT);
-    deleteButton.setLayoutParams(buttonLayoutParams);
-    deleteButton.setBackgroundResource(R.drawable.ic_trash_can);
-
-    deleteButton.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            addressListLayout.removeView(addressLayout);
-            if (addressListLayout.getChildCount() == 0) {
-                giveRouteButton.setBackgroundColor(0xCCCCCC);
-                giveRouteButton.setEnabled(false);
-            }
+        TextView textView = new TextView(MainActivity.this);
+        if (!Objects.equals(chosenAddress, "") && chosenAddress != null) {
+            textView.setText(chosenAddress);
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            textView.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.black));
+            textView.setBackgroundColor(ContextCompat.getColor(MainActivity.this, android.R.color.white));
+            textView.setPadding(16, 16, 16, 16);
+            textView.setTextDirection(View.TEXT_DIRECTION_RTL);
         }
-    });
 
-    addressLayout.addView(deleteButton);
-    addressLayout.addView(textView);
-    addressesArray.add(chosenAddressCoordinates);
+        Button deleteButton = new Button(MainActivity.this);
+        LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        deleteButton.setLayoutParams(buttonLayoutParams);
+        deleteButton.setBackgroundResource(R.drawable.ic_trash_can);
 
+        ImageButton clockButton = new ImageButton(MainActivity.this);
+        clockButton.setImageResource(R.drawable.clock);
+        clockButton.setBackgroundColor(0xCCCCCC);
+        LinearLayout.LayoutParams clockLayoutParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        clockButton.setLayoutParams(clockLayoutParams);
 
-    addressListLayout.addView(addressLayout);
+        // EditText for manual time input
+        EditText timeEditText = new EditText(MainActivity.this);
+        timeEditText.setHint("Enter time"); // Set a hint for the user
+        timeEditText.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
+        timeEditText.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
 
-    if (addressListLayout.getChildCount() != 0) {
-        giveRouteButton.setBackgroundColor(0xffcc0000);
-        giveRouteButton.setEnabled(true);
+        // Add OnClickListener to clockButton
+        clockButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showTimePickerDialog(timeEditText);
+            }
+        });
+
+        ImageButton pathButton = new ImageButton(MainActivity.this);
+        pathButton.setImageResource(R.drawable.path);
+        LinearLayout.LayoutParams pathLayoutParams = new LinearLayout.LayoutParams( 48, 48);
+        pathButton.setLayoutParams(pathLayoutParams);
+
+        deleteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addressListLayout.removeView(addressLayout);
+                if (addressListLayout.getChildCount() == 0) {
+                    giveRouteButton.setBackgroundColor(0xCCCCCC);
+                    giveRouteButton.setEnabled(false);
+                }
+            }
+        });
+
+        addressLayout.addView(deleteButton);
+        addressLayout.addView(textView);
+        addressLayout.addView(clockButton);
+        addressLayout.addView(timeEditText);
+        addressLayout.addView(pathButton);
+        addressesArray.add(chosenAddressCoordinates);
+
+        addressListLayout.addView(addressLayout);
+
+        if (addressListLayout.getChildCount() != 0) {
+            giveRouteButton.setBackgroundColor(0xffcc0000);
+            giveRouteButton.setEnabled(true);
+        }
     }
 
-}
+    // Method to show TimePickerDialog
+    private void showTimePickerDialog(final EditText timeEditText) {
+        Calendar currentTime = Calendar.getInstance();
+        int hour = currentTime.get(Calendar.HOUR_OF_DAY);
+        int minute = currentTime.get(Calendar.MINUTE);
+
+        TimePickerDialog timePickerDialog = new TimePickerDialog(
+                MainActivity.this,
+                new TimePickerDialog.OnTimeSetListener() {
+                    @Override
+                    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                        // Handle the selected time (hourOfDay and minute)
+                        String selectedTime = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute);
+                        // Set the selected time to the EditText
+                        timeEditText.setText(selectedTime);
+                    }
+                },
+                hour,
+                minute,
+                true // Set to true if you want the 24-hour format
+        );
+        timePickerDialog.show();
+    }
+
     private void finishRoute() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("סיימת את המסלול!");
