@@ -144,6 +144,7 @@ public class HistoryList extends AppCompatActivity {
                             public boolean onChildClick(ExpandableListView parent, View v,
                                                         int groupPosition, int childPosition, long id) {
                                 List<String> addresses = expandableDetailList.get(expandableTitleList.get(groupPosition));
+                                expandableListAdapter = new CustomizedExpandableListAdapter(HistoryList.this, expandableTitleList, expandableDetailList,new ArrayList<>(addresses),email);
 
                                 Intent intent = new Intent(HistoryList.this, MainActivity.class);
                                 intent.putExtra("addresses", new ArrayList<>(addresses)); // Pass addresses

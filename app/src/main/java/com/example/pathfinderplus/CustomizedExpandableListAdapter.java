@@ -1,6 +1,7 @@
 package com.example.pathfinderplus;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Typeface;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -21,12 +23,24 @@ public class CustomizedExpandableListAdapter extends BaseExpandableListAdapter {
     private List<String> expandableTitleList;
     private HashMap<String, List<String>> expandableDetailList;
 
+    private List<String> addresses;
+    private String email;
+
     // constructor
     public CustomizedExpandableListAdapter(Context context, List<String> expandableListTitle,
                                            HashMap<String, List<String>> expandableListDetail) {
         this.context = context;
         this.expandableTitleList = expandableListTitle;
         this.expandableDetailList = expandableListDetail;
+    }
+
+    public CustomizedExpandableListAdapter(Context context, List<String> expandableListTitle,
+                                           HashMap<String, List<String>> expandableListDetail,ArrayList<String>addresses,String email) {
+        this.context = context;
+        this.expandableTitleList = expandableListTitle;
+        this.expandableDetailList = expandableListDetail;
+        this.addresses = addresses;
+        this.email = email;
     }
 
     @Override
@@ -53,6 +67,35 @@ public class CustomizedExpandableListAdapter extends BaseExpandableListAdapter {
         }
         TextView expandedListTextView = (TextView) convertView.findViewById(R.id.expandedListItem);
         expandedListTextView.setText(expandedListText);
+        // Find the buttons in your custom layout
+        ImageButton groupButton1 = convertView.findViewById(R.id.groupButton1);
+        ImageButton groupButton2 = convertView.findViewById(R.id.groupButton2);
+
+        // Set click listeners for groupButton1
+        groupButton1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Handle the click for groupButton1
+                // For example, you can show a toast message
+                // Create an Intent to start MainActivity
+                Intent intent = new Intent(context, MainActivity.class);
+                intent.putExtra("addresses", new ArrayList<>(addresses)); // Pass addresses
+                intent.putExtra("EMAIL_ADDRESS", email); // Pass email
+                // Start the MainActivity
+                context.startActivity(intent);
+                Toast.makeText(context, "GroupButton1 clicked", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Set click listeners for groupButton2
+        groupButton2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Handle the click for groupButton2
+                // For example, you can show a toast message
+                Toast.makeText(context, "GroupButton2 clicked", Toast.LENGTH_SHORT).show();
+            }
+        });
         return convertView;
     }
 

@@ -28,7 +28,9 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -96,6 +98,10 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     private String email;
     private ImageButton existingList;
 
+    // Declare this variable at the class level
+    private List<String> chosenAddressesList = new ArrayList<>();
+    private int selectedAddressIndex = -1;
+    private boolean[] selectedStates;
 
     com.google.android.gms.location.LocationCallback locationCallback;
 
@@ -809,6 +815,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
 
     public void addView(String chosenAddress){
+        chosenAddressesList.add(chosenAddress);
         LinearLayout addressLayout = new LinearLayout(MainActivity.this);
         addressLayout.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
@@ -825,6 +832,13 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             textView.setPadding(16, 16, 16, 16);
             textView.setTextDirection(View.TEXT_DIRECTION_RTL);
         }
+        LinearLayout.LayoutParams textViewParams = new LinearLayout.LayoutParams(
+                0, // Width
+                LinearLayout.LayoutParams.WRAP_CONTENT, // Height
+                50f // Weight
+        );
+        textViewParams.gravity = Gravity.CENTER_VERTICAL; // Center vertically
+        textView.setLayoutParams(textViewParams);
 
         Button deleteButton = new Button(MainActivity.this);
         LinearLayout.LayoutParams buttonLayoutParams = new LinearLayout.LayoutParams(
@@ -832,14 +846,26 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 LinearLayout.LayoutParams.WRAP_CONTENT);
         deleteButton.setLayoutParams(buttonLayoutParams);
         deleteButton.setBackgroundResource(R.drawable.ic_trash_can);
+        LinearLayout.LayoutParams deleteButtonParams = new LinearLayout.LayoutParams(
+                0, // Width
+                LinearLayout.LayoutParams.WRAP_CONTENT, // Height
+                10f // Weight
+        );
+        deleteButton.setLayoutParams(deleteButtonParams);
 
         ImageButton clockButton = new ImageButton(MainActivity.this);
         clockButton.setImageResource(R.drawable.clock);
         clockButton.setBackgroundColor(0xCCCCCC);
-        LinearLayout.LayoutParams clockLayoutParams = new LinearLayout.LayoutParams(
+        /*LinearLayout.LayoutParams clockLayoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        clockButton.setLayoutParams(clockLayoutParams);
+        clockButton.setLayoutParams(clockLayoutParams);*/
+        LinearLayout.LayoutParams clockButtonParams = new LinearLayout.LayoutParams(
+                0, // Width
+                LinearLayout.LayoutParams.WRAP_CONTENT, // Height
+                10f // Weight
+        );
+        clockButton.setLayoutParams(clockButtonParams);
 
         clockButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -852,9 +878,17 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         EditText timeEditText = new EditText(MainActivity.this);
         timeEditText.setHint("Enter time"); // Set a hint for the user
         timeEditText.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
-        timeEditText.setLayoutParams(new LinearLayout.LayoutParams(
+       /* timeEditText.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
+                LinearLayout.LayoutParams.WRAP_CONTENT));*/
+        LinearLayout.LayoutParams timeEditTextParams = new LinearLayout.LayoutParams(
+                0, // Width
+                LinearLayout.LayoutParams.WRAP_CONTENT, // Height
+                10f // Weight (Initially 0 weight to hide the view)
+        );
+        timeEditText.setLayoutParams(timeEditTextParams);
+        timeEditText.setVisibility(View.GONE); // Initially hide the view
+
 
         // Add OnClickListener to clockButton
         clockButton.setOnClickListener(new View.OnClickListener() {
@@ -866,8 +900,22 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
         ImageButton pathButton = new ImageButton(MainActivity.this);
         pathButton.setImageResource(R.drawable.path);
-        LinearLayout.LayoutParams pathLayoutParams = new LinearLayout.LayoutParams( 48, 48);
-        pathButton.setLayoutParams(pathLayoutParams);
+        pathButton.setBackgroundColor(0xCCCCCC);
+       /* LinearLayout.LayoutParams pathLayoutParams = new LinearLayout.LayoutParams( 48, 48);
+        pathButton.setLayoutParams(pathLayoutParams);*/
+        LinearLayout.LayoutParams pathButtonParams = new LinearLayout.LayoutParams(
+                0, // Width
+                ViewGroup.LayoutParams.WRAP_CONTENT, // Height (Specified height for pathButton)
+                10f // Weight
+        );
+        pathButton.setLayoutParams(pathButtonParams);
+        pathButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showChosenAddressesDialog();
+            }
+        });
+
 
         deleteButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -894,6 +942,27 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             giveRouteButton.setEnabled(true);
         }
     }
+    private void showChosenAddressesDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("Choose an address");
+
+        // Convert the list of chosen addresses to an array
+        final String[] addressesArray = chosenAddressesList.toArray(new String[0]);
+
+        builder.setItems(addressesArray, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // Handle the selected address from the dialog
+                String selectedAddress = addressesArray[which];
+                // Perform any actions with the selected address
+                // For example, you can display it or use it in your application
+                Toast.makeText(MainActivity.this, "Selected Address: " + selectedAddress, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        builder.show();
+    }
+
 
     // Method to show TimePickerDialog
     private void showTimePickerDialog(final EditText timeEditText) {
@@ -910,6 +979,11 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         String selectedTime = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute);
                         // Set the selected time to the EditText
                         timeEditText.setText(selectedTime);
+                        timeEditText.setFocusable(false); // Make timeEditText non-editable
+                        timeEditText.setClickable(false); // Make timeEditText non-clickable
+                        timeEditText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14); // Adjust text size (you can set your desired size)
+                        timeEditText.setVisibility(View.VISIBLE); // Initially hide the view
+
                     }
                 },
                 hour,
