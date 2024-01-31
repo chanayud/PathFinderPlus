@@ -21,12 +21,15 @@ import android.widget.Toast;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import android.os.Bundle;
@@ -117,13 +120,15 @@ public class HistoryList extends AppCompatActivity {
                     if (!routeList.isEmpty()) {
                         HashMap<String, List<String>> expandableDetailList = ExpandableListDataItems.getData(routeList, HistoryList.this);
                         expandableTitleList = new ArrayList<String>(expandableDetailList.keySet());
-                        expandableListAdapter = new CustomizedExpandableListAdapter(HistoryList.this, expandableTitleList, expandableDetailList);
+                        expandableListAdapter = new CustomizedExpandableListAdapter(HistoryList.this, expandableTitleList, expandableDetailList, email, HistoryList.this);
+
                         expandableListView.setAdapter(expandableListAdapter);
 
                         // This method is called when the group is expanded
                         expandableListView.setOnGroupExpandListener(new ExpandableListView.OnGroupExpandListener() {
                             @Override
                             public void onGroupExpand(int groupPosition) {
+                                List<String> addresses = expandableDetailList.get(expandableTitleList.get(groupPosition));
                                 Toast.makeText(getApplicationContext(), expandableTitleList.get(groupPosition) + " List Expanded.", Toast.LENGTH_SHORT).show();
                             }
                         });
@@ -144,7 +149,6 @@ public class HistoryList extends AppCompatActivity {
                             public boolean onChildClick(ExpandableListView parent, View v,
                                                         int groupPosition, int childPosition, long id) {
                                 List<String> addresses = expandableDetailList.get(expandableTitleList.get(groupPosition));
-                                expandableListAdapter = new CustomizedExpandableListAdapter(HistoryList.this, expandableTitleList, expandableDetailList,new ArrayList<>(addresses),email);
 
                                 Intent intent = new Intent(HistoryList.this, MainActivity.class);
                                 intent.putExtra("addresses", new ArrayList<>(addresses)); // Pass addresses
@@ -204,6 +208,37 @@ public class HistoryList extends AppCompatActivity {
         });
     }
 
+    public void removeRouteItem(int position) {
+        Log.d("mylog", "removeRouteItem: hereeee");
+        if (position >= 0 && position < routeList.size()) {
+            Route removedRoute = routeList.remove(position);
+
+            // Get the document ID or any unique identifier for the route in Firestore
+            String documentId = removedRoute.getTitle(); // Replace with your actual method to get document ID
+
+            // Delete the document from Firestore
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            CollectionReference userCollection = db.collection("users");
+            DocumentReference userDocument = userCollection.document(getIntent().getStringExtra("EMAIL_ADDRESS"));
+
+            // Assuming the documentId is stored in the "routeId" field
+            userDocument.update("listsOfLatLng", FieldValue.arrayRemove(Collections.singletonMap("routeId", documentId)))
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void aVoid) {
+                            Log.d("mylog", "DocumentSnapshot successfully updated!");
+                            // Refresh the UI after successful deletion
+                          //  expandableListAdapter.notifyDataSetChanged();
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            Log.e("mylog", "Error updating document", e);
+                        }
+                    });
+        }
+    }
 
     public static String convertLatLngToAddress(Context context, double latitude, double longitude) {
         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
