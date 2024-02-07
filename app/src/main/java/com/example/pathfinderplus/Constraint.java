@@ -4,8 +4,19 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class Constraint {
     LatLng address;
-    long timeConstraint;
+    int timeConstraint;
     LatLng addressConstraint;
+    String addressString;
+
+
+    public String getAddressString() {
+        return addressString;
+    }
+
+    public void setAddressString(String addressString) {
+        this.addressString = addressString;
+    }
+
 
     public LatLng getAddress() {
         return address;
@@ -19,7 +30,7 @@ public class Constraint {
         return timeConstraint;
     }
 
-    public void setTimeConstraint(long timeConstraint) {
+    public void setTimeConstraint(int timeConstraint) {
         this.timeConstraint = timeConstraint;
     }
 

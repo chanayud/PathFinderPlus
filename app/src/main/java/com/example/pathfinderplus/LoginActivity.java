@@ -277,6 +277,7 @@ public class LoginActivity extends AppCompatActivity {
                                 showErrorDialog("כתובת או סיסמה אינם תקינים");
                             }catch(Exception e) {
                                 Log.e("mylog", e.getMessage());
+                                Toast.makeText(LoginActivity.this, "failed to login", Toast.LENGTH_LONG);
                             }
 
                             Log.d("mylog", "login failed: "+task.getException().getMessage());

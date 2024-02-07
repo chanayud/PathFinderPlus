@@ -1,11 +1,16 @@
 package com.example.pathfinderplus;
 
+import static com.example.pathfinderplus.MainActivity.ConstraintsArray;
+import static com.example.pathfinderplus.MainActivity.addressesArray;
+import static com.example.pathfinderplus.MainActivity.distanceArray;
+
 import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import kotlin.jvm.internal.Lambda;
@@ -16,9 +21,10 @@ public class TSPSolver {
     private static final double COOLING_RATE = 0.95;
     private static final int ITERATIONS_PER_TEMPERATURE = 1000;
 
+
     public static ArrayList<LatLng> solveTSP(ArrayList<LatLng> cities, ArrayList<Distance> distances) {
         Log.d("MainActivity", "cities.size:"+cities.size());
-        ArrayList<LatLng> bestSolution = new ArrayList<>(cities);
+        ArrayList<LatLng> bestSolution = new ArrayList<>();
         ArrayList<LatLng> currentSolution = new ArrayList<>(cities);
 
         double temperature = INITIAL_TEMPERATURE;
@@ -45,18 +51,22 @@ public class TSPSolver {
 
                 // Determine if we should accept the new solution
                 if (acceptSolution(currentEnergy, newEnergy, temperature)) {
-                    currentSolution = new ArrayList<>(newSolution);
-
-                    // Update the best solution
-                    if (newEnergy < calculateEnergy(bestSolution, distances)) {
-                        bestSolution = new ArrayList<>(newSolution);
+//                    int totalDistanceInSeconds;
+//                    int currentAddressIndex = 0;
+//                    int constraintAddressIndex = 0;
+                    boolean constraintFlag = checkConstraints(newSolution, ConstraintsArray);
+                    if(constraintFlag) {
+                        currentSolution = new ArrayList<>(newSolution);
+                        // Update the best solution
+                        if (newEnergy < calculateEnergy(bestSolution, distances)) {
+                            bestSolution = new ArrayList<>(newSolution);
+                        }
                     }
                 }
             }
 
             temperature *= COOLING_RATE;  // Reduce the temperature
         }
-
         return bestSolution;
     }
 
@@ -68,7 +78,8 @@ public class TSPSolver {
 
     private static double calculateEnergy(ArrayList<LatLng> solution, ArrayList<Distance> distances) {
         double energy = 0;
-
+        if (solution.size() == 0)
+            return Double.MAX_VALUE;
         for (int i = 0; i < solution.size() - 1; i++) {
             LatLng currentCity = solution.get(i);
             LatLng nextCity = solution.get(i + 1);
@@ -91,5 +102,41 @@ public class TSPSolver {
         Random random = new Random();
         return random.nextDouble() < acceptanceProbability;
     }
+    private static boolean checkConstraints(ArrayList<LatLng> route, List<Constraint> constraintArray) {
+        for (Constraint constraint : constraintArray) {
+            // Check time constraint
+            if (constraint.getTimeConstraint() != 0) {
+                int totalDistanceInSeconds = 0;
+                for (int j = 0; j < route.size() - 1; j++) {
+                    if (route.get(j).equals(constraint.getAddress()))
+                        break;
+
+                    for (Distance distance : distanceArray) {
+                        if (route.get(j).equals(distance.getOrigin()) && route.get(j + 1).equals(distance.getDestination())) {
+                            totalDistanceInSeconds += distance.getDistance();
+                            break;
+                        }
+                    }
+                }
+                if (totalDistanceInSeconds > constraint.getTimeConstraint()) {
+                    return false; // Constraint violation
+                }
+            }
+
+            // Check place constraint
+            if (constraint.getAddressConstraint() != null) {
+                int currentAddressIndex = route.indexOf(constraint.getAddress());
+                int constraintAddressIndex = route.indexOf(constraint.getAddressConstraint());
+
+                if (constraintAddressIndex < currentAddressIndex) {
+                    return false; // Constraint violation
+                }
+            }
+        }
+        return true; // All constraints met
+    }
+
 }
+
+
 

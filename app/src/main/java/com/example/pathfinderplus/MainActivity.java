@@ -62,6 +62,8 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import org.checkerframework.checker.units.qual.C;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,7 +82,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     public static ArrayList<LatLng> addressesArray = new ArrayList<>();
     public static ArrayList<Distance> distanceArray = new ArrayList<>();
     private DistanceCalculator distanceCalculator;
-    private Constraint ConstraintsArray;
     String chosenAddress;
     Button addAddressButton;
     Button giveRouteButton;
@@ -102,8 +103,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     private List<String> chosenAddressesList = new ArrayList<>();
     private int selectedAddressIndex = -1;
     private boolean[] selectedStates;
+    public static ArrayList<Constraint> ConstraintsArray;
+    boolean validRoute = true;
+
 
     com.google.android.gms.location.LocationCallback locationCallback;
+
 
 
     private BroadcastReceiver myReceiver;
@@ -122,6 +127,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         addAddressButton = findViewById(R.id.saveAddressButtonID);
         giveRouteButton = findViewById(R.id.giveMeRouteButtonID);
         existingList = findViewById(R.id.existingList);
+        ConstraintsArray = new ArrayList<>();
         TooltipCompat.setTooltipText(existingList, "בחירה מההיסטוריה");
         if(isNewUser)
             existingList.setEnabled(false);
@@ -139,6 +145,9 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 ArrayList<String> addresses = intent.getStringArrayListExtra("addresses");
                 if (addresses != null && !addresses.isEmpty()) {
                     addressListLayout.removeAllViews();
+                    if(ConstraintsArray!=null) {
+                        ConstraintsArray.clear();
+                    }
                     addressesArray.clear();
                     for (String address : addresses) {
                         chosenAddressCoordinates = getLatLngFromAddress(this, address);
@@ -151,7 +160,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     startNavigation(addressesArray.get(0));
                 }
             }
-
             if (!Places.isInitialized()) {
                 Places.initialize(getApplicationContext(), "AIzaSyB2wY2x6ZthLJ0XsvsdVahEY-Iap6ryi6M");
             }
@@ -366,7 +374,8 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                             // Got the current location
                             LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
                             // Add the current location to the addressesArray at the first position
-                            addressesArray.add(0, currentLatLng);
+                            if (addressesArray.get(0).latitude != currentLatLng.latitude && addressesArray.get(0).longitude != currentLatLng.longitude)
+                                addressesArray.add(0, currentLatLng);
                             Log.d("MainActivity", "in addCurrentLocation - add to addressArray - current location: "+addressesArray.get(0));
                             calculateDistance();
 
@@ -446,19 +455,133 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
     public void routeCalculateBySimulatedAnealing(){
         progressBar.setVisibility(View.VISIBLE); // Show the spinner
+        boolean syncFlag = true;
+        boolean flag = checkTimeConstrains();
+        if (flag) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    // Execute the code in a new thread
+                    Log.d("MainActivity", "addressesArray.size:" + addressesArray.size());
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                // Execute the code in a new thread
-                Log.d("MainActivity", "addressesArray.size:"+addressesArray.size());
+                    ArrayList<LatLng> solution = TSPSolver.solveTSP(addressesArray, distanceArray);
+                    if (solution.size() == 0) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
+                                ShowNoRouteErrorMassage();
+                            }
+                        });
+                        validRoute = false;
+                    } else {
+                        //   addressesArray.clear();
+                        addressesArray = new ArrayList<>(solution);
+                        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
+                        // Remove the first address since you've already reached it
+                        addressesArray.remove(0);
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
+                            }
+                        });
 
-                ArrayList<LatLng> solution = TSPSolver.solveTSP(addressesArray, distanceArray);
-             //   addressesArray.clear();
-                addressesArray = new ArrayList<>(solution);
-                Log.d("mylog", "addressesArray: "+ addressesArray.get(0).latitude + " "+ addressesArray.get(0).longitude);
+                        startNavigation(addressesArray.get(0));
+
+
+                        // Print the solution
+                        for (LatLng address : solution) {
+                            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+                            Log.d("mylog", "anealing-address: " + stringAddress);
+                        }
+                    }
+                }
+            }).start();
+        }
+    }
+
+
+
+    public void ShowNoRouteErrorMassage(){
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setMessage("לא נמצא מסלול העומד באילוצים שהזנת")
+                .setCancelable(false)
+                .setPositiveButton("אישור", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // User clicked OK button
+                        // You can add any additional actions you want here
+                        dialog.dismiss(); // Dismiss the dialog
+                    }
+                });
+
+// Create the AlertDialog
+        AlertDialog alert = builder.create();
+
+// Show the AlertDialog
+        alert.show();
+        ConstraintsArray.clear();
+
+    }
+    public boolean checkTimeConstrains() {
+        boolean flag = true;
+        StringBuilder invalidDestinations = new StringBuilder();
+        for (Constraint constraint : ConstraintsArray) {
+            if (constraint.timeConstraint > 0) {
+                for (Distance distance : distanceArray) {
+                    if (distance.getOrigin().latitude == addressesArray.get(0).latitude
+                            && distance.getOrigin().longitude == addressesArray.get(0).longitude
+                            && distance.getDestination().latitude == constraint.address.latitude
+                            && distance.getDestination().longitude == constraint.address.longitude) {
+
+                        if (distance.getDistance() > constraint.timeConstraint) {
+                            flag = false;
+                            invalidDestinations.append(convertLatLngToAddress(MainActivity.this, constraint.address.latitude, constraint.address.longitude))
+                                    .append(", "); // Add invalid destination to the string
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        if (!flag) {
+            String alertMessage = "האילוצים שהזנת בתחנות: " + invalidDestinations.toString() + "לא קבילים";
+            // Remove the trailing comma and space from the string
+//            alertMessage = alertMessage.substring(0, alertMessage.length() - 2);
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle("שגיאת אילוץ")
+                    .setMessage(alertMessage)
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            progressBar.setVisibility(View.GONE); // Show the spinner
+                        }
+                    });
+
+            AlertDialog alertDialog = builder.create();
+            alertDialog.show();
+        }
+        return flag;
+    }
+    public void routeCalculateByNaiveAlgorithm() {
+        progressBar.setVisibility(View.VISIBLE); // Show the spinner
+        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
+        boolean tempFlag = checkTimeConstrains();
+        if (tempFlag) {
+            addressesArray = solveTSPnew();
+            if (addressesArray.size() == 0) {
+                ShowNoRouteErrorMassage();
+                progressBar.setVisibility(View.GONE); // Show the spinner
+            } else {
+                // Print the solution
+                for (LatLng address : addressesArray) {
+                    String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+                    Log.d("mylog", "naive-address: " + stringAddress);
+                }
+                if (addressesArray.size() > 1) {
                     // Remove the first address since you've already reached it
                     addressesArray.remove(0);
+                }
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -467,50 +590,20 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 });
 
                 startNavigation(addressesArray.get(0));
-
-
-                // Print the solution
-                for (LatLng address : solution) {
-                    String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
-                    Log.d("mylog", "anealing-address: "+ stringAddress);
-                }
             }
-        }).start();
-    };
-    public void routeCalculateByNaiveAlgorithm() {
-        progressBar.setVisibility(View.VISIBLE); // Show the spinner
-        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
-
-        addressesArray = solveTSPnew();
-        // Print the solution
-        for (LatLng address : addressesArray) {
-            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
-            Log.d("mylog", "naive-address: " + stringAddress);
         }
-        if (addressesArray.size() > 1) {
-            // Remove the first address since you've already reached it
-            addressesArray.remove(0);
-        }
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                progressBar.setVisibility(View.GONE); // Dismiss the spinner
-            }
-        });
-
-        startNavigation(addressesArray.get(0));
     }
 
     public ArrayList<LatLng> solveTSPnew() {
         LatLng sourceAddress = addressesArray.get(0);
         addressesArray.remove(0);
         List<ArrayList<LatLng>> permutations = generatePermutations(addressesArray, sourceAddress);
-        double shortsetDistance = Integer.MAX_VALUE;
-        double tempDistance;
+        double shortsetDistance = Double.MAX_VALUE;
         ArrayList<LatLng> resultRoute = new ArrayList<>();
         for(ArrayList<LatLng> permutation : permutations){
-            tempDistance = calculateRouteDistance(permutation);
-            if(tempDistance<shortsetDistance){
+            double tempDistance = calculateRouteDistance(permutation);
+            boolean meetsConstraints = checkConstraints(permutation, ConstraintsArray);
+            if(meetsConstraints && tempDistance<shortsetDistance){
                 shortsetDistance = tempDistance;
                 resultRoute = permutation;
             }
@@ -518,6 +611,41 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         return resultRoute;
 
     }
+
+    private boolean checkConstraints(ArrayList<LatLng> route, List<Constraint> constraintArray) {
+        for (Constraint constraint : constraintArray) {
+            // Check time constraint
+            if (constraint.getTimeConstraint() != 0) {
+                int totalDistanceInSeconds = 0;
+                for (int j = 0; j < route.size() - 1; j++) {
+                    if (route.get(j).equals(constraint.getAddress()))
+                        break;
+
+                    for (Distance distance : distanceArray) {
+                        if (route.get(j).equals(distance.getOrigin()) && route.get(j + 1).equals(distance.getDestination())) {
+                            totalDistanceInSeconds += distance.getDistance();
+                            break;
+                        }
+                    }
+                }
+                if (totalDistanceInSeconds > constraint.getTimeConstraint()) {
+                    return false; // Constraint violation
+                }
+            }
+
+            // Check place constraint
+            if (constraint.getAddressConstraint() != null) {
+                int currentAddressIndex = route.indexOf(constraint.getAddress());
+                int constraintAddressIndex = route.indexOf(constraint.getAddressConstraint());
+
+                if (constraintAddressIndex < currentAddressIndex) {
+                    return false; // Constraint violation
+                }
+            }
+        }
+        return true; // All constraints met
+    }
+
 
     public static List<ArrayList<LatLng>> generatePermutations(ArrayList<LatLng> addressesArray, LatLng sourceAddress) {
         List<ArrayList<LatLng>> result = new ArrayList<>();
@@ -814,7 +942,9 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     }
 
 
-    public void addView(String chosenAddress){
+    public void addView(String chosenAddress) {
+        final EditText timeEditText = new EditText(MainActivity.this);
+        timeEditText.setTag(chosenAddress);
         chosenAddressesList.add(chosenAddress);
         LinearLayout addressLayout = new LinearLayout(MainActivity.this);
         addressLayout.setOrientation(LinearLayout.HORIZONTAL);
@@ -856,10 +986,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         ImageButton clockButton = new ImageButton(MainActivity.this);
         clockButton.setImageResource(R.drawable.clock);
         clockButton.setBackgroundColor(0xCCCCCC);
-        /*LinearLayout.LayoutParams clockLayoutParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        clockButton.setLayoutParams(clockLayoutParams);*/
         LinearLayout.LayoutParams clockButtonParams = new LinearLayout.LayoutParams(
                 0, // Width
                 LinearLayout.LayoutParams.WRAP_CONTENT, // Height
@@ -867,20 +993,9 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         );
         clockButton.setLayoutParams(clockButtonParams);
 
-        clockButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                
-            }
-        });
-
         // EditText for manual time input
-        EditText timeEditText = new EditText(MainActivity.this);
         timeEditText.setHint("Enter time"); // Set a hint for the user
         timeEditText.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
-       /* timeEditText.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));*/
         LinearLayout.LayoutParams timeEditTextParams = new LinearLayout.LayoutParams(
                 0, // Width
                 LinearLayout.LayoutParams.WRAP_CONTENT, // Height
@@ -897,6 +1012,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 showTimePickerDialog(timeEditText);
             }
         });
+        addressLayout.setTag(timeEditText);
 
         ImageButton pathButton = new ImageButton(MainActivity.this);
         pathButton.setImageResource(R.drawable.path);
@@ -912,7 +1028,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         pathButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showChosenAddressesDialog();
+                showChosenAddressesDialog(timeEditText);
             }
         });
 
@@ -942,7 +1058,8 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             giveRouteButton.setEnabled(true);
         }
     }
-    private void showChosenAddressesDialog() {
+    private void showChosenAddressesDialog(EditText timeEditText) {
+        String address = (String) timeEditText.getTag();
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("Choose an address");
 
@@ -956,6 +1073,24 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 String selectedAddress = addressesArray[which];
                 // Perform any actions with the selected address
                 // For example, you can display it or use it in your application
+                boolean exists = false;
+                LatLng selectedAddressInLatLng = getLatLngFromAddress(MainActivity.this,selectedAddress);
+                LatLng addressInLatLng = getLatLngFromAddress(MainActivity.this,address);
+
+                for(Constraint constraint : ConstraintsArray){
+                    if(constraint.address == addressInLatLng){
+                        constraint.addressConstraint = getLatLngFromAddress(MainActivity.this,selectedAddress);
+                        exists = true;
+                        break;
+                    }
+                }
+                if(!exists){
+                    Constraint constraint = new Constraint();
+                    constraint.setAddress(addressInLatLng);
+                    constraint.setAddressConstraint(selectedAddressInLatLng);
+                    constraint.setAddressString(selectedAddress);
+                    ConstraintsArray.add(constraint);
+                }
                 Toast.makeText(MainActivity.this, "Selected Address: " + selectedAddress, Toast.LENGTH_SHORT).show();
             }
         });
@@ -974,16 +1109,37 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 MainActivity.this,
                 new TimePickerDialog.OnTimeSetListener() {
                     @Override
-                    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                    public void onTimeSet(TimePicker view, int hourOfDay, int minuteInHour) {
+                        String address = (String) timeEditText.getTag();
                         // Handle the selected time (hourOfDay and minute)
-                        String selectedTime = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minute);
+                        String selectedTime = String.format(Locale.getDefault(), "%02d:%02d", hourOfDay, minuteInHour);
                         // Set the selected time to the EditText
                         timeEditText.setText(selectedTime);
                         timeEditText.setFocusable(false); // Make timeEditText non-editable
                         timeEditText.setClickable(false); // Make timeEditText non-clickable
                         timeEditText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14); // Adjust text size (you can set your desired size)
                         timeEditText.setVisibility(View.VISIBLE); // Initially hide the view
-
+                        int curentTimeInSeconds = hour * 3600 + minute * 60;
+                        int constraintTimeInSeconds = hourOfDay * 3600 + minuteInHour * 60;
+                        if(constraintTimeInSeconds < curentTimeInSeconds){
+                            constraintTimeInSeconds = constraintTimeInSeconds + (24 * 3600);
+                        }
+                        constraintTimeInSeconds -= curentTimeInSeconds;
+                        boolean exists = false;
+                        for (Constraint constraint : ConstraintsArray) {
+                            if (convertLatLngToAddress(MainActivity.this,constraint.address.latitude, constraint.address.longitude).equals(address)){
+                                exists = true;
+                                constraint.timeConstraint = constraintTimeInSeconds;
+                                break;
+                            }
+                        }
+                            if (!exists){
+                                Constraint tempConstraint = new Constraint();
+                                tempConstraint.setAddress(getLatLngFromAddress(MainActivity.this,address));
+                                tempConstraint.setTimeConstraint(constraintTimeInSeconds);
+                                tempConstraint.setAddressString(address);
+                                ConstraintsArray.add(tempConstraint);
+                            }
                     }
                 },
                 hour,
