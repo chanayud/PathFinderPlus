@@ -16,16 +16,24 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.provider.Settings;
+import android.text.Html;
 import android.text.InputType;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -48,6 +56,7 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.StyleSpan;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -62,8 +71,6 @@ import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import org.checkerframework.checker.units.qual.C;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -75,6 +82,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.*;
+
 
 public class MainActivity extends AppCompatActivity implements GetDistanceTask.DistanceCallback {
 
@@ -105,7 +114,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     private boolean[] selectedStates;
     public static ArrayList<Constraint> ConstraintsArray;
     boolean validRoute = true;
-
+    ArrayList<LatLng> SASolution;
 
     com.google.android.gms.location.LocationCallback locationCallback;
 
@@ -321,8 +330,9 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             }
             if(addressesArray.size()<5)
                 routeCalculateByNaiveAlgorithm();
-            else
-                routeCalculateBySimulatedAnealing();
+            else {
+                calculateRoutesAndStartNavigation();
+            }
         }
     }
 
@@ -453,52 +463,57 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
             }
 
-    public void routeCalculateBySimulatedAnealing(){
-        progressBar.setVisibility(View.VISIBLE); // Show the spinner
-        boolean syncFlag = true;
-        boolean flag = checkTimeConstrains();
-        if (flag) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
+    public ArrayList<LatLng> routeCalculateBySimulatedAnealing(){
+        Log.d("mylog", "routeCalculateBySimulatedAnealing: I'm here");
+//        progressBar.setVisibility(View.VISIBLE); // Show the spinner
+//        boolean flag = checkTimeConstrains();
+//        if (flag) {
+//            new Thread(new Runnable() {
+//                @Override
+//                public void run() {
                     // Execute the code in a new thread
-                    Log.d("MainActivity", "addressesArray.size:" + addressesArray.size());
+                    Log.d("mylog", "addressesArray.size:" + addressesArray.size());
 
-                    ArrayList<LatLng> solution = TSPSolver.solveTSP(addressesArray, distanceArray);
-                    if (solution.size() == 0) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
-                                ShowNoRouteErrorMassage();
-                            }
-                        });
-                        validRoute = false;
-                    } else {
+                    SASolution = TSPSolver.solveTSP(addressesArray, distanceArray);
+                    Log.d("mylog", "SASolution.size:" + SASolution.size());
+
+//                    if (solution.size() == 0) {
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
+//                                ShowNoRouteErrorMassage();
+//                            }
+//                        });
+//                        validRoute = false;
+//                    } else {
                         //   addressesArray.clear();
-                        addressesArray = new ArrayList<>(solution);
-                        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
+//                        addressesArray = new ArrayList<>(solution);
+//                        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
                         // Remove the first address since you've already reached it
-                        addressesArray.remove(0);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
-                            }
-                        });
+                    if (SASolution.size()>0) {
+                        SASolution.remove(0);
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
+//                            }
+//                        });
 
-                        startNavigation(addressesArray.get(0));
+//                        startNavigation(addressesArray.get(0));
 
 
                         // Print the solution
-                        for (LatLng address : solution) {
+                        for (LatLng address : SASolution) {
                             String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
                             Log.d("mylog", "anealing-address: " + stringAddress);
                         }
                     }
-                }
-            }).start();
-        }
+//                    }
+//
+//            }).start();
+//        }
+        return SASolution;
     }
 
 
@@ -794,17 +809,42 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
     public void startNavigation(LatLng destination) {
         Log.d("MainActivity", "start navigation");
+        showRouteDetailsDialogWithDelay(destination, 3000);
+    }
 
+    private void showRouteDetailsDialogWithDelay(final LatLng destination, long delayMillis) {
+        showRouteDetailsDialog(destination); // Show the dialog immediately
+
+        new CountDownTimer(delayMillis, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                // Not needed for this example, but you can perform actions on each tick
+            }
+
+            @Override
+            public void onFinish() {
+                // Your navigation logic here, e.g., startNavigation(destination);
+
+                // For demonstration purposes, let's log a message
+                Log.d("MainActivity", "Delayed navigation code executed after 3 seconds");
+
+                // Proceed with the navigation logic
+                proceedWithNavigation(destination);
+            }
+        }.start();
+    }
+
+    private void proceedWithNavigation(LatLng destination) {
         double destinationLatitude = destination.latitude;
         double destinationLongitude = destination.longitude;
         String jobId = UUID.randomUUID().toString();
-
 
         serviceIntent = new Intent(this, LocationMonitoringForegroundService.class);
         serviceIntent.putExtra("DESTINATION_LATITUDE", destinationLatitude);
         serviceIntent.putExtra("DESTINATION_LONGITUDE", destinationLongitude);
         serviceIntent.putExtra("JOB_ID", jobId);
-        Log.d("MainActivity", "DESTINATION_LATITUDE: "+destinationLatitude+" DESTINATION_LONGITUDE: "+destinationLongitude+" JOB_ID: "+jobId);
+        Log.d("MainActivity", "DESTINATION_LATITUDE: " + destinationLatitude +
+                " DESTINATION_LONGITUDE: " + destinationLongitude + " JOB_ID: " + jobId);
 
         startService(serviceIntent);
 
@@ -1195,5 +1235,162 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         }
     }
 
+    public ArrayList<LatLng> routeCalculateByMinimalSpanningTree() {
+        progressBar.setVisibility(View.VISIBLE); // Show the spinner
+//        boolean flag = checkTimeConstrains();
+//        for (LatLng address : addressesArray) {
+//            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+//            Log.d("mylog", "before-MinimalSpanningTree-address: " + stringAddress);
+//        }
+//        if (flag) {
+            ArrayList<LatLng> solution = MinimalSpanningTree.findBestRoute(addressesArray, distanceArray, MainActivity.this);
+//            if (solution.size() == 0) {
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        progressBar.setVisibility(View.GONE); // Dismiss the spinner
+//                        ShowNoRouteErrorMassage();
+//                    }
+//                });
+//                validRoute = false;
+//            } else {
+//                //   addressesArray.clear();
+////                addressesArray = new ArrayList<>(solution);
+////                Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
+//                // Remove the first address since you've already reached it
+            if (solution.size() > 0) {
+                solution.remove(0);
+
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        progressBar.setVisibility(View.GONE); // Dismiss the spinner
+//                    }
+//                });
+
+//                startNavigation(addressesArray.get(0));
+
+
+                // Print the solution
+                for (LatLng address : solution) {
+                    String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+                    Log.d("mylog", "MinimalSpanningTree-address: " + stringAddress);
+                }
+            }
+            return solution;
+//        }
+//        return null;
+    }
+
+    public void calculateRoutesAndStartNavigation() {
+        progressBar.setVisibility(View.VISIBLE); // Show the spinner
+        boolean flag = checkTimeConstrains();
+
+        if (flag) {
+            ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+            Callable<ArrayList<LatLng>> simulatedAnealingTask = new Callable<ArrayList<LatLng>>() {
+                @Override
+                public ArrayList<LatLng> call() throws Exception {
+                    return routeCalculateBySimulatedAnealing();
+                }
+            };
+
+            Callable<ArrayList<LatLng>> minimalSpanningTreeTask = new Callable<ArrayList<LatLng>>() {
+                @Override
+                public ArrayList<LatLng> call() throws Exception {
+                    return routeCalculateByMinimalSpanningTree();
+                }
+            };
+
+            Future<ArrayList<LatLng>> simulatedAnealingFuture = executorService.submit(simulatedAnealingTask);
+            Future<ArrayList<LatLng>> minimalSpanningTreeFuture = executorService.submit(minimalSpanningTreeTask);
+
+            try {
+                ArrayList<LatLng> simulatedAnealingResult = simulatedAnealingFuture.get();
+                ArrayList<LatLng> minimalSpanningTreeResult = minimalSpanningTreeFuture.get();
+
+                // Choose the route with the minimum length
+                ArrayList<LatLng> selectedRoute;
+                if (calculateTotalDistance(simulatedAnealingResult) <= calculateTotalDistance(minimalSpanningTreeResult)) {
+                    selectedRoute = simulatedAnealingResult;
+                    Log.d("mylog", "simulatedAnealingResult selected");
+                } else {
+                    selectedRoute = minimalSpanningTreeResult;
+                    Log.d("mylog", "minimalSpanningTreeResult selected");
+
+                }
+                progressBar.setVisibility(View.GONE); // Show the spinner
+                if (selectedRoute.size() > 0) {
+                    startNavigation(selectedRoute.get(0));
+                } else {
+                    ShowNoRouteErrorMassage();
+                    validRoute = false;
+                }
+
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            } finally {
+                executorService.shutdown();
+            }
+        }
+    }
+
+    private int calculateTotalDistance(ArrayList<LatLng> route) {
+        int totalDistance = 0;
+
+        for (int i = 0; i < route.size() - 1; i++) {
+            LatLng origin = route.get(i);
+            LatLng destination = route.get(i + 1);
+
+            for (Distance distance : distanceArray) {
+                if (origin.equals(distance.getOrigin()) && destination.equals(distance.getDestination())) {
+                    totalDistance += distance.getDistance();
+                    break;
+                }
+            }
+        }
+
+        return totalDistance;
+    }
+
+    private void showRouteDetailsDialog(LatLng destination) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // Inflate the custom layout
+        View customLayout = getLayoutInflater().inflate(R.layout.custom_dialog_layout, null);
+        builder.setView(customLayout);
+
+        // Find the TextViews in the custom layout
+        TextView titleTextView = customLayout.findViewById(R.id.titleTextView);
+        TextView firstItemTextView = customLayout.findViewById(R.id.firstItemTextView);
+        TextView messageTextView = customLayout.findViewById(R.id.messageTextView);
+        LinearLayout firstItemLayout = customLayout.findViewById(R.id.firstItemLayout);
+
+        // Set title properties
+        titleTextView.setText("יתרת המסלול שלך היא");
+
+        // Set the first item properties
+        firstItemTextView.setText(convertLatLngToAddress(this, addressesArray.get(0).latitude, addressesArray.get(0).longitude));
+        firstItemLayout.setBackgroundColor(Color.parseColor("#FF0000")); // Set background color for the first item
+
+        // Create a SpannableStringBuilder to apply styling to the route details
+        SpannableStringBuilder routeDetails = new SpannableStringBuilder();
+
+        for (int i = 1; i < addressesArray.size(); i++) {
+            String address = convertLatLngToAddress(this, addressesArray.get(i).latitude, addressesArray.get(i).longitude);
+            routeDetails.append(address);
+
+            if (i < addressesArray.size() - 1) {
+                routeDetails.append("\n"); // Add a newline between addresses
+            }
+        }
+
+        // Set the styled text to the TextView for the message
+        messageTextView.setText(routeDetails);
+
+        // Show the dialog
+        builder.show();
+    }
 
 }
