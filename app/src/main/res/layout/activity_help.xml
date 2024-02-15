@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    tools:context=".HelpActivity"
+    tools:ignore="ExtraText">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/welcomeText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/title_help"
+        android:layout_centerHorizontal="true"
+        android:textSize="18sp"
+        android:padding="16dp"/>
+
+    <TextView
+        android:id="@+id/secondText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/welcomeText"
+        android:text="@string/explanations"
+        android:textSize="16sp"
+        android:padding="16dp"/>
+
+    <ImageButton
+        android:id="@+id/search"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/secondText"
+        android:layout_marginTop="16dp"
+        android:src="@drawable/clock_new"
+        android:backgroundTint="@color/white"
+        android:padding="8dp"/>
+
+    <TextView
+        android:id="@+id/thirdText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/secondText"
+        android:layout_toEndOf="@id/search"
+        android:text="@string/search"
+        android:textSize="16sp"
+        android:padding="16dp"/>
+
+    <Button
+        android:id="@+id/addAddressButton"
+        android:layout_width="50dp"
+        android:layout_height="30dp"
+        android:layout_below="@id/thirdText"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:backgroundTint="@android:color/holo_red_dark"
+        android:padding="8dp"
+        android:src="@drawable/clock_new"
+        android:text="@string/add_address"
+        android:textSize="6sp"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/addAddress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/thirdText"
+        android:layout_toEndOf="@id/addAddressButton"
+        android:text="@string/search"
+        android:textSize="16sp"
+        android:padding="16dp"/>
+
+    <ImageButton
+        android:id="@+id/time_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/addAddress"
+        android:layout_marginTop="16dp"
+        android:src="@drawable/clock_new"
+        android:backgroundTint="@color/white"
+        android:padding="8dp"/>
+
+    <TextView
+        android:id="@+id/time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/addAddress"
+        android:layout_toEndOf="@id/time_button"
+        android:text="@string/time"
+        android:textSize="16sp"
+        android:padding="16dp"/>
+
+    <ImageButton
+        android:id="@+id/path_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/time"
+        android:layout_marginTop="16dp"
+        android:src="@drawable/path_pointers_new"
+        android:backgroundTint="@color/white"
+        android:padding="8dp"/>
+
+    <TextView
+        android:id="@+id/path"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/time"
+        android:layout_toEndOf="@id/path_button"
+        android:text="@string/path"
+        android:textSize="16sp"
+        android:padding="16dp"/>
+
+
+        <Button
+            android:id="@+id/createPathButton"
+            android:layout_width="50dp"
+            android:layout_height="30dp"
+            android:layout_below="@id/path"
+            android:layout_marginTop="16dp"
+            android:layout_weight="1"
+            android:backgroundTint="@android:color/holo_red_dark"
+            android:padding="8dp"
+            android:textSize="6sp"
+            android:text="@string/careate_path"
+            android:textColor="@android:color/white" />
+
+        <TextView
+            android:id="@+id/createPath"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/path"
+            android:layout_toEndOf="@id/createPathButton"
+            android:text="@string/careate_path_text"
+            android:textSize="16sp"
+            android:padding="16dp"/>
+
+        <ImageButton
+            android:id="@+id/history_button"
+
+            android:layout_below="@id/createPath"
+            android:layout_marginTop="16dp"
+            android:src="@drawable/history"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:backgroundTint="@color/white"
+            android:padding="8dp"/>
+
+        <TextView
+            android:id="@+id/history"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/createPath"
+            android:layout_toEndOf="@id/history_button"
+            android:text="@string/history_text"
+            android:textSize="16sp"
+            android:padding="16dp"/>
+
+        <ImageButton
+            android:id="@+id/choose_button"
+            android:layout_below="@id/history"
+            android:layout_marginTop="16dp"
+            android:src="@drawable/history"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:backgroundTint="@color/white"
+            android:padding="8dp"/>
+
+        <TextView
+            android:id="@+id/chosse"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/history"
+            android:layout_toEndOf="@id/choose_button"
+            android:text="@string/choose_text"
+            android:textSize="16sp"
+            android:padding="16dp"/>
+
+        <ImageButton
+            android:id="@+id/delete_button"
+            android:layout_below="@id/chosse"
+            android:layout_marginTop="16dp"
+            android:src="@drawable/history"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:backgroundTint="@color/white"
+            android:padding="8dp"/>
+
+        <TextView
+            android:id="@+id/delete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/chosse"
+            android:layout_toEndOf="@id/delete_button"
+            android:text="@string/delete_text"
+            android:textSize="16sp"
+            android:padding="16dp"/>
+
+        <ImageButton
+            android:id="@+id/home_button"
+            android:layout_below="@id/delete"
+            android:layout_marginTop="16dp"
+            android:src="@drawable/history"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:backgroundTint="@color/white"
+            android:padding="8dp"/>
+
+        <TextView
+            android:id="@+id/home"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/delete"
+            android:layout_toEndOf="@id/home_button"
+            android:text="@string/home_text"
+            android:textSize="16sp"
+            android:padding="16dp"/>
+
+        <Button
+            android:id="@+id/ok_button"
+            android:layout_width="150dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="130dp"
+            android:layout_marginTop="30dp"
+            android:layout_marginBottom="16dp"
+            android:layout_alignParentBottom="true"
+            android:text="@string/ok"
+            android:backgroundTint="@android:color/holo_red_dark"
+            android:textColor="@android:color/white" />
+    </RelativeLayout>
+
+</ScrollView>

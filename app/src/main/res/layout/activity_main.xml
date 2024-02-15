@@ -32,16 +32,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/history"
+    <ImageButton
+        android:id="@+id/helpButton"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         android:layout_marginStart="5dp"
-        android:layout_marginBottom="20dp"
-        android:layout_marginTop="-10dp"
-        android:textColor="#A9A9A9"
-        app:layout_constraintTop_toBottomOf="@id/existingList"
-        app:layout_constraintStart_toStartOf="@id/existingList"/>
+        android:layout_marginTop="20dp"
+        android:src="@drawable/garbage"
+        android:backgroundTint="@color/white"
+        android:scaleType="fitCenter"
+        app:layout_constraintStart_toEndOf="@id/existingList"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <fragment
         android:id="@+id/autocomplete_fragment"

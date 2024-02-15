@@ -31,6 +31,9 @@
             android:name=".HistoryList"
             android:exported="false" />
         <activity
+            android:name=".HelpActivity"
+            android:exported="false" />
+        <activity
             android:name=".LoginActivity"
             android:exported="false" />
         <activity

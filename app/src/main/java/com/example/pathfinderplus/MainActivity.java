@@ -1,5 +1,7 @@
 package com.example.pathfinderplus;
 
+import static com.example.pathfinderplus.Constraint.getAddressConstraintByAddress;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -16,6 +18,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -31,10 +35,13 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -105,6 +112,8 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     private boolean[] selectedStates;
     public static ArrayList<Constraint> ConstraintsArray;
     boolean validRoute = true;
+    int chosenAddressPosition = -1; // Initialize with an invalid position
+
 
 
     com.google.android.gms.location.LocationCallback locationCallback;
@@ -194,6 +203,16 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 @Override
                 public void onError(@NonNull Status status) {
                     Log.i("MyLog", "An error occurred: " + status);
+                }
+            });
+
+            ImageButton helpButton = findViewById(R.id.helpButton);
+            helpButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Navigate to the help page
+                    Intent intent = new Intent(MainActivity.this, HelpActivity.class);
+                    startActivity(intent);
                 }
             });
 
@@ -1028,7 +1047,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         pathButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showChosenAddressesDialog(timeEditText);
+                showChosenAddressesDialog(timeEditText, chosenAddress);
             }
         });
 
@@ -1046,9 +1065,9 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
         addressLayout.addView(deleteButton);
         addressLayout.addView(textView);
+        addressLayout.addView(pathButton);
         addressLayout.addView(clockButton);
         addressLayout.addView(timeEditText);
-        addressLayout.addView(pathButton);
         addressesArray.add(chosenAddressCoordinates);
 
         addressListLayout.addView(addressLayout);
@@ -1058,33 +1077,90 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             giveRouteButton.setEnabled(true);
         }
     }
-    private void showChosenAddressesDialog(EditText timeEditText) {
+    // Declare AlertDialog as a member variable of your class
+    private AlertDialog dialog;
+
+    private void showChosenAddressesDialog(EditText timeEditText, String chosenAddress) {
         String address = (String) timeEditText.getTag();
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        builder.setTitle("Choose an address");
+        builder.setTitle("בחר כתובת");
+
+        // Inflate custom layout for the dialog content
+        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog_layout, null);
+        builder.setView(dialogView);
+
+        // Get the ListView from the custom layout
+        ListView listView = dialogView.findViewById(R.id.listView);
 
         // Convert the list of chosen addresses to an array
-        final String[] addressesArray = chosenAddressesList.toArray(new String[0]);
+        final List<String> addressesList = new ArrayList<>(chosenAddressesList);
+        addressesList.remove(chosenAddress);
+        final String[] addressesArray = addressesList.toArray(new String[0]);
 
-        builder.setItems(addressesArray, new DialogInterface.OnClickListener() {
+        // Find the position of the chosen address in the addressesArray
+        for (int i = 0; i < addressesArray.length; i++) {
+            if (chosenAddress.equals(addressesArray[i])) {
+                chosenAddressPosition = i;
+                break;
+            }
+        }
+        // Set up custom adapter
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, addressesArray) {
             @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // Handle the selected address from the dialog
-                String selectedAddress = addressesArray[which];
-                // Perform any actions with the selected address
-                // For example, you can display it or use it in your application
-                boolean exists = false;
-                LatLng selectedAddressInLatLng = getLatLngFromAddress(MainActivity.this,selectedAddress);
-                LatLng addressInLatLng = getLatLngFromAddress(MainActivity.this,address);
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                Log.d("mylog", "position: " + position);
 
-                for(Constraint constraint : ConstraintsArray){
-                    if(constraint.address == addressInLatLng){
-                        constraint.addressConstraint = getLatLngFromAddress(MainActivity.this,selectedAddress);
+                // Get the current address
+                String currentAddress = addressesArray[position];
+                Log.d("mylog", "currentAddress: " + currentAddress);
+                Log.d("mylog", "chosenAddress: " + chosenAddress);
+
+                // Check if the current position matches the position of the chosen address
+                if (position == chosenAddressPosition) {
+                    // Apply bold style to the text of the current view
+                    TextView textView = (TextView) view.findViewById(android.R.id.text1);
+                    textView.setTypeface(null, Typeface.BOLD);
+                } else {
+                    // Ensure other items are not bolded
+                    TextView textView = (TextView) view.findViewById(android.R.id.text1);
+                    textView.setTypeface(null, Typeface.NORMAL);
+                }
+
+                // Return the modified view
+                return view;
+            }
+        };
+
+
+
+        // Set the adapter to the ListView
+        listView.setAdapter(adapter);
+
+        // Create and show the AlertDialog
+        dialog = builder.create();
+        dialog.show();
+
+        // Handle item click listener
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedAddress = addressesArray[position];
+                // Handle the selected address from the dialog
+                // Perform any necessary actions with the selected address
+                boolean exists = false;
+                LatLng selectedAddressInLatLng = getLatLngFromAddress(MainActivity.this, selectedAddress);
+                LatLng addressInLatLng = getLatLngFromAddress(MainActivity.this, address);
+
+                for (Constraint constraint : ConstraintsArray) {
+                    if (constraint.address == addressInLatLng) {
+                        constraint.addressConstraint = getLatLngFromAddress(MainActivity.this, selectedAddress);
                         exists = true;
                         break;
                     }
                 }
-                if(!exists){
+                if (!exists) {
                     Constraint constraint = new Constraint();
                     constraint.setAddress(addressInLatLng);
                     constraint.setAddressConstraint(selectedAddressInLatLng);
@@ -1092,11 +1168,105 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     ConstraintsArray.add(constraint);
                 }
                 Toast.makeText(MainActivity.this, "Selected Address: " + selectedAddress, Toast.LENGTH_SHORT).show();
+
+                // Close the dialog after all actions are performed
+                dialog.dismiss();
+            }
+        });
+    }
+
+
+
+   /* private void showChosenAddressesDialog(EditText timeEditText, String chosenAddress) {
+        String address = (String) timeEditText.getTag();
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("בחר כתובת");
+
+        // Inflate custom layout for the dialog content
+        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog_layout, null);
+        builder.setView(dialogView);
+
+        // Get the ListView from the custom layout
+        ListView listView = dialogView.findViewById(R.id.listView);
+
+        // Convert the list of chosen addresses to an array
+        final List<String> addressesList = new ArrayList<>(chosenAddressesList);
+        addressesList.remove(chosenAddress);
+        final String[] addressesArray = addressesList.toArray(new String[0]);
+
+        // Set up custom adapter
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, addressesArray) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                Log.d("mylog", "position: "+position);
+                // Get the current address
+                String currentAddress = addressesArray[position];
+                Log.d("mylog", "currentAddress: "+currentAddress);
+                Log.d("mylog", "chosenAddress: "+chosenAddress);
+                for (String addr : addressesArray) {
+                    if(ConstraintsArray != null && ConstraintsArray.size()>0){
+                        // Check if the current address matches the constraint
+                        LatLng constraintsAddrLatLng = getAddressConstraintByAddress(ConstraintsArray, getLatLngFromAddress(MainActivity.this, addr));
+                        //Log.d("mylog", "addr: "+addr);
+
+                        String constraintsAddr = convertLatLngToAddress(MainActivity.this, constraintsAddrLatLng.latitude, constraintsAddrLatLng.longitude);
+                        //Log.d("mylog", "constraintsAddr: "+constraintsAddr);
+                        // If the current address matches the constraint, apply your custom appearance
+                        //  if (constraintsAddr.equals(currentAddress)) {
+                        // Apply your custom appearance here
+                        view.setBackgroundColor(Color.YELLOW);
+                        //}
+                    }
+
+
+
+                }
+
+
+                return view;
+            }
+        };
+
+        // Set the adapter to the ListView
+        listView.setAdapter(adapter);
+
+        // Handle item click listener
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedAddress = addressesArray[position];
+                // Handle the selected address from the dialog
+                //String selectedAddress = addressesArray[which];
+                // Perform any actions with the selected address
+                // For example, you can display it or use it in your application
+                boolean exists = false;
+                LatLng selectedAddressInLatLng = getLatLngFromAddress(MainActivity.this, selectedAddress);
+                LatLng addressInLatLng = getLatLngFromAddress(MainActivity.this, address);
+
+                for (Constraint constraint : ConstraintsArray) {
+                    if (constraint.address == addressInLatLng) {
+                        constraint.addressConstraint = getLatLngFromAddress(MainActivity.this, selectedAddress);
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) {
+                    Constraint constraint = new Constraint();
+                    constraint.setAddress(addressInLatLng);
+                    constraint.setAddressConstraint(selectedAddressInLatLng);
+                    constraint.setAddressString(selectedAddress);
+                    ConstraintsArray.add(constraint);
+                }
+                Toast.makeText(MainActivity.this, "Selected Address: " + selectedAddress, Toast.LENGTH_SHORT).show();
+
             }
         });
 
+        // Show the AlertDialog
         builder.show();
-    }
+    }*/
+
 
 
     // Method to show TimePickerDialog
