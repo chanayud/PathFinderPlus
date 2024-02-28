@@ -36,7 +36,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/secondText"
         android:layout_marginTop="16dp"
-        android:src="@drawable/clock_new"
+        android:src="@drawable/search"
         android:backgroundTint="@color/white"
         android:padding="8dp"/>
 
@@ -70,7 +70,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/thirdText"
         android:layout_toEndOf="@id/addAddressButton"
-        android:text="@string/search"
+        android:text="@string/add_address_text"
         android:textSize="16sp"
         android:padding="16dp"/>
 
@@ -140,12 +140,12 @@
 
         <ImageButton
             android:id="@+id/history_button"
-
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_below="@id/createPath"
             android:layout_marginTop="16dp"
-            android:src="@drawable/history"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:src="@drawable/history_small"
+
             android:backgroundTint="@color/white"
             android:padding="8dp"/>
 
@@ -163,9 +163,9 @@
             android:id="@+id/choose_button"
             android:layout_below="@id/history"
             android:layout_marginTop="16dp"
-            android:src="@drawable/history"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:src="@drawable/check_small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:backgroundTint="@color/white"
             android:padding="8dp"/>
 
@@ -183,9 +183,9 @@
             android:id="@+id/delete_button"
             android:layout_below="@id/chosse"
             android:layout_marginTop="16dp"
-            android:src="@drawable/history"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:src="@drawable/garbage_small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:backgroundTint="@color/white"
             android:padding="8dp"/>
 
@@ -203,9 +203,9 @@
             android:id="@+id/home_button"
             android:layout_below="@id/delete"
             android:layout_marginTop="16dp"
-            android:src="@drawable/history"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:src="@drawable/home_small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:backgroundTint="@color/white"
             android:padding="8dp"/>
 

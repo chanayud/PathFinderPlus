@@ -134,7 +134,7 @@ public class LoginActivity extends AppCompatActivity {
                                         if (task.isSuccessful()) {
                                             // Sign-up success
                                             Toast.makeText(LoginActivity.this, "Sign-up successful", Toast.LENGTH_SHORT).show();
-                                            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                                            Intent intent = new Intent(LoginActivity.this, HelpActivity.class);
                                             intent.putExtra("EMAIL_ADDRESS", email);
                                             intent.putExtra("IS_NEW_USER", true);
                                             startActivity(intent);
