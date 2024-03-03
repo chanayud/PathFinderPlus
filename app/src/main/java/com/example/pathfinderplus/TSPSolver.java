@@ -18,11 +18,12 @@ import kotlin.jvm.internal.Lambda;
 public class TSPSolver {
 
     private static final double INITIAL_TEMPERATURE = 100;
-    private static final double COOLING_RATE = 0.95;
-    private static final int ITERATIONS_PER_TEMPERATURE = 1000;
+    private static final double COOLING_RATE = 0.9;
+    private static final int ITERATIONS_PER_TEMPERATURE = 10;
 
 
     public static ArrayList<LatLng> solveTSP(ArrayList<LatLng> cities, ArrayList<Distance> distances) {
+        Log.d("parralele", "routeCalculateBySimulatedAnealing: parralele2");
         Log.d("MainActivity", "cities.size:"+cities.size());
         ArrayList<LatLng> bestSolution = new ArrayList<>();
         ArrayList<LatLng> currentSolution = new ArrayList<>(cities);
@@ -30,6 +31,7 @@ public class TSPSolver {
         double temperature = INITIAL_TEMPERATURE;
 
         while (temperature > 1) {
+            Log.d("parralele", "routeCalculateBySimulatedAnealing: parralele3");
             for (int i = 0; i < ITERATIONS_PER_TEMPERATURE; i++) {
                 ArrayList<LatLng> newSolution = new ArrayList<>(currentSolution);
 

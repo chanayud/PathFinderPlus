@@ -12,6 +12,7 @@ import androidx.appcompat.widget.TooltipCompat;
 
 
 import android.Manifest;
+import android.app.ActivityManager;
 import android.app.TimePickerDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -26,10 +27,12 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.provider.Settings;
 import android.text.InputType;
+import android.text.SpannableStringBuilder;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -77,11 +80,17 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class MainActivity extends AppCompatActivity implements GetDistanceTask.DistanceCallback {
 
@@ -112,7 +121,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     private boolean[] selectedStates;
     public static ArrayList<Constraint> ConstraintsArray;
     boolean validRoute = true;
+    ArrayList<LatLng> SASolution;
+
     int chosenAddressPosition = -1; // Initialize with an invalid position
+    public LatLng currentLatLng;
+    public static Geocoder geocoder;
+
 
 
 
@@ -127,10 +141,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d("mainFlow", "start-onCreate");
         email = getIntent().getStringExtra("EMAIL_ADDRESS");
         boolean isNewUser = getIntent().getBooleanExtra("IS_NEW_USER", false);
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         setContentView(R.layout.activity_main);
+        geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
         progressBar = findViewById(R.id.progressBar);
         addressListLayout = findViewById(R.id.addressListLayoutID);
         addAddressButton = findViewById(R.id.saveAddressButtonID);
@@ -145,8 +161,10 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         if (intent != null && "START_NAVIGATION".equals(intent.getAction())) {
             Log.d("MainActivity", "stop service here");
             stopService(serviceIntent);
-                if(addressesArray.size()>1)
+                if(addressesArray.size()>1){
+                    addressesArray.remove(0);
                     calculateDistance();
+                }
                 else
                     finishRoute();
         } else {
@@ -163,9 +181,18 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         addView(address);
                     }
                 }
-                ArrayList<LatLng> newRoute = intent.getParcelableArrayListExtra("NEW_ROUTE");
+                ArrayList<LatLng> newRoute = intent.getParcelableArrayListExtra("newRoute");
                 if(newRoute!=null){
-                    addressesArray = newRoute;
+                    Log.d("mylog", "newRoute is not null");
+                    addressesArray = new ArrayList<>(newRoute);
+//                    Log.d("mylog", "before startNavigation1: "+convertLatLngToAddress(this,addressesArray.get(0).latitude, addressesArray.get(0).longitude)+" currentLatLng: "+convertLatLngToAddress(this, currentLatLng.latitude, currentLatLng.longitude));
+//                    if (currentLatLng!= null && convertLatLngToAddress(this,addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress(this, currentLatLng.latitude, currentLatLng.longitude))){
+//                        addressesArray.remove(0);
+//                        Log.d("mylog", "removing 1st item: ");
+//                    }
+//                        Log.d("mylog", "before startNavigation1: "+convertLatLngToAddress(this,addressesArray.get(0).latitude, addressesArray.get(0).longitude)+" currentLatLng: "+convertLatLngToAddress(this, currentLatLng.latitude, currentLatLng.longitude));
+                    Log.d("mylog", "addressesArray.get(0): "+addressesArray.get(0));
+                    stopService(serviceIntent);
                     startNavigation(addressesArray.get(0));
                 }
             }
@@ -310,12 +337,14 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 }
             });
         }
+        Log.d("mainFlow", "finish-onCreate");
     }
 
     @Override
 
     protected void onDestroy() {
         super.onDestroy();
+        Log.d("mainFlow", "start-onDestroy");
         stopService(serviceIntent);
         // Unregister the receiver when the activity is destroyed
         LocalBroadcastManager.getInstance(this).unregisterReceiver(myReceiver);
@@ -323,10 +352,14 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
         // Stop the location update service
         stopService(new Intent(this, GeofenceForegroundService.class));
+        Log.d("mainFlow", "finish-onDestroy");
+
     }
 
     @Override
     public void onDistanceCalculated(Distance distance) {
+        Log.d("mainFlow", "start-onDistanceCalculated");
+
         distanceArray.add(distance);
         if (distanceArray.size() == expectedApiCalls) {
             Log.d("mylog", "expectedApiCalls: "+expectedApiCalls);
@@ -341,11 +374,13 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             if(addressesArray.size()<5)
                 routeCalculateByNaiveAlgorithm();
             else
-                routeCalculateBySimulatedAnealing();
+                calculateRoutesAndStartNavigation();
         }
+        Log.d("mainFlow", "finish-onDistanceCalculated");
     }
 
     public void requestPermissions() {
+        Log.d("mainFlow", "start-requestPermissions");
         Log.d("MainActivity", "requestPermissions: ");
         int locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
         if (locationPermission != PackageManager.PERMISSION_GRANTED) {
@@ -354,10 +389,10 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             Log.d("MainActivity", "before addCurrentLocation");
             addCurrentLocation();
         }
-        Log.d("MainActivity", "requestPermissions: end");
-
+        Log.d("mainFlow", "finish-requestPermissions");
     }
     public void addCurrentLocation() {
+        Log.d("mainFlow", "start-addCurrentLocation");
         progressBar.setVisibility(View.VISIBLE); // Show the ProgressBar
         if (!isLocationEnabled()) {
             Log.d("MainActivity", "location disabled");
@@ -380,6 +415,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
                     @Override
                     public void onLocationResult(LocationResult locationResult) {
+                        Log.d("mainFlow", "start-onLocationResult");
                         if (locationResult == null) {
                             Log.d("MainActivity", "locationResult is null");
                             return;
@@ -391,54 +427,54 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         if (location != null) {
                             stopLocationUpdates();
                             // Got the current location
-                            LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                            currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
                             // Add the current location to the addressesArray at the first position
-                            if (addressesArray.get(0).latitude != currentLatLng.latitude && addressesArray.get(0).longitude != currentLatLng.longitude)
+                            if (!convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress(currentLatLng.latitude, currentLatLng.longitude)))
+                            if (!convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress(currentLatLng.latitude, currentLatLng.longitude)))
                                 addressesArray.add(0, currentLatLng);
                             Log.d("MainActivity", "in addCurrentLocation - add to addressArray - current location: "+addressesArray.get(0));
                             calculateDistance();
-
-
-                            // Rest of your code here (distance calculation)
-
-
                         }
-
+                        Log.d("mainFlow", "finish-onLocationResult");
                     }
-
                 };
                 startLocationUpdates(locationRequest, locationCallback);
-
             }
         }
-
+        Log.d("mainFlow", "finish-addCurrentLocation");
     }
 
     private void startLocationUpdates(LocationRequest locationRequest, LocationCallback locationCallback) {
+        Log.d("mainFlow", "start-startLocationUpdates");
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             Log.d("MainActivity", "missed required permission");
             return;
         }
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+        Log.d("mainFlow", "finish-startLocationUpdates");
+
     }
 
     public void stopLocationUpdates() {
+        Log.d("mainFlow", "start-stopLocationUpdates");
         if (fusedLocationClient != null && locationCallback != null) {
             fusedLocationClient.removeLocationUpdates((com.google.android.gms.location.LocationCallback) locationCallback);
         }
+        Log.d("mainFlow", "finish-stopLocationUpdates");
     }
 
     // Method to check if location services are enabled
     private boolean isLocationEnabled() {
+        Log.d("mainFlow", "start-isLocationEnabled");
         LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        Log.d("mainFlow", "finish-isLocationEnabled");
         return locationManager != null && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
     }
 
     // Method to prompt user to enable location services
     private void promptEnableLocation() {
-        Log.d("MainActivity", "promptEnableLocation");
-
+        Log.d("mainFlow", "start-promptEnableLocation");
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Location Services Not Enabled")
                 .setMessage("Please enable location services to use this feature")
@@ -457,72 +493,86 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     }
                 });
         builder.create().show();
+        Log.d("mainFlow", "finish-promptEnableLocation");
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-            if(requestCode == 1) {
+        Log.d("mainFlow", "start-onRequestPermissionsResult");
+        if(requestCode == 1) {
                 ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_BACKGROUND_LOCATION"}, MY_PERMISSIONS_REQUEST_BACKGROUND_LOCATION);
                 Log.d("MainActivity", "onRequestPermissionsResult: " + requestCode);
             }
             else if(requestCode == 2) {
                 addCurrentLocation();
             }
-
+        Log.d("mainFlow", "finish-onRequestPermissionsResult");
             }
 
-    public void routeCalculateBySimulatedAnealing(){
-        progressBar.setVisibility(View.VISIBLE); // Show the spinner
-        boolean syncFlag = true;
-        boolean flag = checkTimeConstrains();
-        if (flag) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    // Execute the code in a new thread
-                    Log.d("MainActivity", "addressesArray.size:" + addressesArray.size());
+    public ArrayList<LatLng> routeCalculateBySimulatedAnealing(){
+        Log.d("mainFlow", "start-routeCalculateBySimulatedAnealing");
+//        progressBar.setVisibility(View.VISIBLE); // Show the spinner
+//        boolean syncFlag = true;
+//        boolean flag = checkTimeConstrains();
+//        if (flag) {
+//            new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                     Execute the code in a new thread
+//                    Log.d("MainActivity", "addressesArray.size:" + addressesArray.size());
 
-                    ArrayList<LatLng> solution = TSPSolver.solveTSP(addressesArray, distanceArray);
-                    if (solution.size() == 0) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
-                                ShowNoRouteErrorMassage();
-                            }
-                        });
-                        validRoute = false;
-                    } else {
+//                    ArrayList<LatLng> solution = TSPSolver.solveTSP(addressesArray, distanceArray);
+//                    if (solution.size() == 0) {
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
+//                                ShowNoRouteErrorMassage();
+//                            }
+//                        });
+//                        validRoute = false;
+//                    } else {
                         //   addressesArray.clear();
-                        addressesArray = new ArrayList<>(solution);
-                        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
-                        // Remove the first address since you've already reached it
-                        addressesArray.remove(0);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
-                            }
-                        });
+        Log.d("mylog", "addressesArray.size:" + addressesArray.size());
 
-                        startNavigation(addressesArray.get(0));
+        SASolution = TSPSolver.solveTSP(addressesArray, distanceArray);
+        Log.d("mylog", "SASolution.size:" + SASolution.size());
+        if (SASolution.size()>0) {
+//            SASolution.remove(0);
+
+//        addressesArray = new ArrayList<>(solution);
+//                        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
+                        // Remove the first address since you've already reached it
+//                        addressesArray.remove(0);
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
+//                            }
+//                        });
+//                        Log.d("mylog", "before startNavigation1: "+convertLatLngToAddress(MainActivity.this,addressesArray.get(0).latitude, addressesArray.get(0).longitude)+" currentLatLng: "+convertLatLngToAddress(MainActivity.this, currentLatLng.latitude, currentLatLng.longitude));
+//                        Log.d("mylog", "before startNavigation2: "+convertLatLngToAddress(MainActivity.this,addressesArray.get(0).latitude, addressesArray.get(0).longitude));
+//                        startNavigation(addressesArray.get(0));
 
 
                         // Print the solution
-                        for (LatLng address : solution) {
-                            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+                        for (LatLng address : SASolution) {
+                            String stringAddress = convertLatLngToAddress(address.latitude, address.longitude);
                             Log.d("mylog", "anealing-address: " + stringAddress);
                         }
                     }
-                }
-            }).start();
-        }
+//                }
+//            }).start();
+        Log.d("mainFlow", "finish-routeCalculateBySimulatedAnealing");
+        return SASolution;
+//        }
     }
 
 
 
     public void ShowNoRouteErrorMassage(){
+        Log.d("mainFlow", "start-ShowNoRouteErrorMassage");
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setMessage("לא נמצא מסלול העומד באילוצים שהזנת")
                 .setCancelable(false)
@@ -540,9 +590,10 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 // Show the AlertDialog
         alert.show();
         ConstraintsArray.clear();
-
+        Log.d("mainFlow", "finish-ShowNoRouteErrorMassage");
     }
     public boolean checkTimeConstrains() {
+        Log.d("mainFlow", "start-checkTimeConstrains");
         boolean flag = true;
         StringBuilder invalidDestinations = new StringBuilder();
         for (Constraint constraint : ConstraintsArray) {
@@ -555,7 +606,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
                         if (distance.getDistance() > constraint.timeConstraint) {
                             flag = false;
-                            invalidDestinations.append(convertLatLngToAddress(MainActivity.this, constraint.address.latitude, constraint.address.longitude))
+                            invalidDestinations.append(convertLatLngToAddress( constraint.address.latitude, constraint.address.longitude))
                                     .append(", "); // Add invalid destination to the string
                         }
                         break;
@@ -580,21 +631,23 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             AlertDialog alertDialog = builder.create();
             alertDialog.show();
         }
+        Log.d("mainFlow", "finish-checkTimeConstrains");
         return flag;
     }
     public void routeCalculateByNaiveAlgorithm() {
+        Log.d("mainFlow", "start-routeCalculateByNaiveAlgorithm");
         progressBar.setVisibility(View.VISIBLE); // Show the spinner
         Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
         boolean tempFlag = checkTimeConstrains();
         if (tempFlag) {
-            addressesArray = solveTSPnew();
+            addressesArray = new ArrayList<>(solveTSPnew());
             if (addressesArray.size() == 0) {
                 ShowNoRouteErrorMassage();
                 progressBar.setVisibility(View.GONE); // Show the spinner
             } else {
                 // Print the solution
                 for (LatLng address : addressesArray) {
-                    String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+                    String stringAddress = convertLatLngToAddress( address.latitude, address.longitude);
                     Log.d("mylog", "naive-address: " + stringAddress);
                 }
                 if (addressesArray.size() > 1) {
@@ -607,13 +660,20 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         progressBar.setVisibility(View.GONE); // Dismiss the spinner
                     }
                 });
-
+//                Log.d("mylog", "before startNavigation1: "+convertLatLngToAddress(this,addressesArray.get(0).latitude, addressesArray.get(0).longitude)+" currentLatLng: "+convertLatLngToAddress(this, currentLatLng.latitude, currentLatLng.longitude));
+                if (currentLatLng!=null && convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress(currentLatLng.latitude, currentLatLng.longitude))){
+                    Log.d("mylog", "removing 1st item: ");
+                    addressesArray.remove(0);
+                }
+//                Log.d("mylog", "before startNavigation2: "+convertLatLngToAddress(this,addressesArray.get(0).latitude, addressesArray.get(0).longitude));
                 startNavigation(addressesArray.get(0));
             }
         }
+        Log.d("mainFlow", "finish-routeCalculateByNaiveAlgorithm");
     }
 
     public ArrayList<LatLng> solveTSPnew() {
+        Log.d("mainFlow", "start-solveTSPnew");
         LatLng sourceAddress = addressesArray.get(0);
         addressesArray.remove(0);
         List<ArrayList<LatLng>> permutations = generatePermutations(addressesArray, sourceAddress);
@@ -627,11 +687,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 resultRoute = permutation;
             }
         }
+        Log.d("mainFlow", "finish-solveTSPnew");
         return resultRoute;
-
     }
 
     private boolean checkConstraints(ArrayList<LatLng> route, List<Constraint> constraintArray) {
+        Log.d("mainFlow", "start-checkConstraints");
         for (Constraint constraint : constraintArray) {
             // Check time constraint
             if (constraint.getTimeConstraint() != 0) {
@@ -662,17 +723,21 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 }
             }
         }
+        Log.d("mainFlow", "finish-checkConstraints");
         return true; // All constraints met
     }
 
 
     public static List<ArrayList<LatLng>> generatePermutations(ArrayList<LatLng> addressesArray, LatLng sourceAddress) {
+        Log.d("mainFlow", "start-generatePermutations");
         List<ArrayList<LatLng>> result = new ArrayList<>();
         generatePermutationsHelper(addressesArray, 0, result, sourceAddress);
+        Log.d("mainFlow", "finish-generatePermutations");
         return result;
     }
 
     private static void generatePermutationsHelper(ArrayList<LatLng> array, int index, List<ArrayList<LatLng>> result, LatLng sourceAddress) {
+        Log.d("mainFlow", "start-generatePermutationsHelper");
         if (index == array.size() - 1) {
             // We reached the end of the array, add a copy to the result
             ArrayList<LatLng> resultArray = new ArrayList<>(array);
@@ -695,13 +760,15 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             array.set(index, array.get(i));
             array.set(i, temp);
         }
+        Log.d("mainFlow", "start-generatePermutationsHelper");
     }
 
 
     public void solveTSP() {
+        Log.d("mainFlow", "start-solveTSP");
         int n = addressesArray.size();
         LatLng firstAddress = addressesArray.get(0);
-        Log.d("distance", "firstAddress: "+convertLatLngToAddress(this, firstAddress.latitude, firstAddress.longitude));
+        Log.d("distance", "firstAddress: "+convertLatLngToAddress(firstAddress.latitude, firstAddress.longitude));
 
         // Find the index of the first address in the original addressesArray
         int indexOfFirstAddress = addressesArray.indexOf(firstAddress);
@@ -729,7 +796,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         for (List<LatLng> route : allRoutes) {
             double currentDistance = calculateRouteDistance(route);
             for(LatLng address : route){
-                Log.d("currentDistance", "address: "+convertLatLngToAddress(this, address.latitude, address.longitude));
+                Log.d("currentDistance", "address: "+convertLatLngToAddress(address.latitude, address.longitude));
             }
             Log.d("distance", "currentDistance: "+currentDistance);
 
@@ -745,7 +812,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
         // Print the solution
         for (LatLng address : shortestRoute) {
-            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
+            String stringAddress = convertLatLngToAddress( address.latitude, address.longitude);
             Log.d("mylog", "address: " + stringAddress);
         }
 
@@ -758,24 +825,34 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 progressBar.setVisibility(View.GONE); // Dismiss the spinner
             }
         });
+//        Log.d("mylog", "before startNavigation1: "+convertLatLngToAddress(this,shortestRoute.get(0).latitude, shortestRoute.get(0).longitude)+" currentLatLng: "+convertLatLngToAddress(this, currentLatLng.latitude, currentLatLng.longitude));
+        if (currentLatLng!=null && convertLatLngToAddress(shortestRoute.get(0).latitude, shortestRoute.get(0).longitude).equals(convertLatLngToAddress( currentLatLng.latitude, currentLatLng.longitude))){
+            Log.d("mylog", "removing 1st item: ");
+            shortestRoute.remove(0);
+        }
 
+//        Log.d("mylog", "before startNavigation2: "+convertLatLngToAddress(this,shortestRoute.get(0).latitude, shortestRoute.get(0).longitude));
         startNavigation(shortestRoute.get(0));
+        Log.d("mainFlow", "finish-solveTSP");
     }
 
     private void swap(int[] arr, int i, int j) {
+        Log.d("mainFlow", "start-swap");
         int temp = arr[i];
         arr[i] = arr[j];
         arr[j] = temp;
+        Log.d("mainFlow", "finish-swap");
     }
 
     private double calculateRouteDistance(List<LatLng> route) {
+        Log.d("mainFlow", "start-calculateRouteDistance");
         double totalDistance = 0.0;
         for (int i = 0; i < route.size() - 1; i++) {
             LatLng current = route.get(i);
-            Log.d("distance", "current: " + convertLatLngToAddress(this,current.latitude, current.longitude));
+            Log.d("distance", "current: " + convertLatLngToAddress(current.latitude, current.longitude));
 
             LatLng next = route.get(i + 1);
-            Log.d("distance", "next: " + convertLatLngToAddress(this,next.latitude, next.longitude));
+            Log.d("distance", "next: " + convertLatLngToAddress(next.latitude, next.longitude));
 
             int distance = getDistanceBetween(current, next);
             Log.d("distance", "distance: " + distance);
@@ -783,18 +860,19 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             totalDistance += distance;
         }
         Log.d("distance", "totalDistance: " + totalDistance);
-
+        Log.d("mainFlow", "finish-calculateRouteDistance");
         return totalDistance;
     }
 
     private int getDistanceBetween(LatLng source, LatLng destination) {
-        String sourceAddress = convertLatLngToAddress(this, source.latitude, source.longitude);
-        String destinationAddress = convertLatLngToAddress(this, destination.latitude, destination.longitude);
+        Log.d("mainFlow", "start-getDistanceBetween");
+        String sourceAddress = convertLatLngToAddress(source.latitude, source.longitude);
+        String destinationAddress = convertLatLngToAddress( destination.latitude, destination.longitude);
         Log.d("mylog", "getDisBetween: source: "+sourceAddress+" destination: "+destinationAddress);
 
         for (Distance d : distanceArray) {
-            String tempSource = convertLatLngToAddress(this, d.getOrigin().latitude, d.getOrigin().longitude);
-            String tempDestination = convertLatLngToAddress(this, d.getDestination().latitude, d.getDestination().longitude);
+            String tempSource = convertLatLngToAddress( d.getOrigin().latitude, d.getOrigin().longitude);
+            String tempDestination = convertLatLngToAddress( d.getDestination().latitude, d.getDestination().longitude);
             Log.d("mylog", "d: "+d.getDistance() + " tempSource: "+tempSource+" d.tempDestination: "+tempDestination);
           //  if (d.getOrigin().latitude == source.latitude && d.getOrigin().longitude == source.longitude  && d.getDestination().latitude == destination.latitude && d.getDestination().longitude == destination.longitude) {
             assert tempSource != null;
@@ -806,39 +884,211 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 }
             }
         }
+        Log.d("mainFlow", "finish-getDistanceBetween");
         return Integer.MAX_VALUE; // Handle case when distance is not found
     }
 
 
 
     public void startNavigation(LatLng destination) {
-        Log.d("MainActivity", "start navigation");
+        Log.d("mainFlow", "start-startNavigation");
+        showRouteDetailsDialogWithDelay(destination, 3000);
+        Log.d("mainFlow", "finish-startNavigation");
+    }
 
-        double destinationLatitude = destination.latitude;
-        double destinationLongitude = destination.longitude;
-        String jobId = UUID.randomUUID().toString();
+    private void showRouteDetailsDialogWithDelay(final LatLng destination, long delayMillis) {
+        Log.d("mainFlow", "start-showRouteDetailsDialogWithDelay");
+        showRouteDetailsDialog(destination); // Show the dialog immediately
+        new CountDownTimer(delayMillis, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                // Not needed for this example, but you can perform actions on each tick
+            }
+
+            @Override
+            public void onFinish() {
+                // Your navigation logic here, e.g., startNavigation(destination);
+
+                // For demonstration purposes, let's log a message
+                Log.d("MainActivity", "Delayed navigation code executed after 3 seconds");
+
+                // Proceed with the navigation logic
+                proceedWithNavigation(destination);
+            }
+        }.start();
+        Log.d("mainFlow", "finish-showRouteDetailsDialogWithDelay");
+    }
+    private void proceedWithNavigation(LatLng destination) {
+        Log.d("mainFlow", "start-proceedWithNavigation");
+        if (!isMyServiceRunning(LocationMonitoringForegroundService.class)) {
+
+            double destinationLatitude = destination.latitude;
+            double destinationLongitude = destination.longitude;
+            String jobId = UUID.randomUUID().toString();
 
 
-        serviceIntent = new Intent(this, LocationMonitoringForegroundService.class);
-        serviceIntent.putExtra("DESTINATION_LATITUDE", destinationLatitude);
-        serviceIntent.putExtra("DESTINATION_LONGITUDE", destinationLongitude);
-        serviceIntent.putExtra("JOB_ID", jobId);
-        Log.d("MainActivity", "DESTINATION_LATITUDE: "+destinationLatitude+" DESTINATION_LONGITUDE: "+destinationLongitude+" JOB_ID: "+jobId);
+            serviceIntent = new Intent(this, LocationMonitoringForegroundService.class);
+            serviceIntent.putExtra("DESTINATION_LATITUDE", destinationLatitude);
+            serviceIntent.putExtra("DESTINATION_LONGITUDE", destinationLongitude);
+            serviceIntent.putExtra("JOB_ID", jobId);
+            Log.d("MainActivity", "DESTINATION_LATITUDE: " + destinationLatitude + " DESTINATION_LONGITUDE: " + destinationLongitude + " JOB_ID: " + jobId);
 
-        startService(serviceIntent);
+            startService(serviceIntent);
 
-        Uri gmmIntentUri = Uri.parse("google.navigation:q=" + destinationLatitude + "," + destinationLongitude);
-        Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
-        mapIntent.setPackage("com.google.android.apps.maps");
-        if (mapIntent.resolveActivity(getPackageManager()) != null) {
-            Log.d("MainACtivity", "navigation started: ");
-            // Open Google Maps with navigation
-            startActivity(mapIntent);
+            Uri gmmIntentUri = Uri.parse("google.navigation:q=" + destinationLatitude + "," + destinationLongitude);
+            Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+            mapIntent.setPackage("com.google.android.apps.maps");
+            if (mapIntent.resolveActivity(getPackageManager()) != null) {
+                Log.d("MainACtivity", "navigation started: ");
+                // Open Google Maps with navigation
+                startActivity(mapIntent);
+            }
+        }else {
+            Log.d("MainActivity", "Service is already running");
         }
+        Log.d("mainFlow", "finish-proceedWithNavigation");
+    }
+    public ArrayList<LatLng> routeCalculateByMinimalSpanningTree() {
+        Log.d("mainFlow", "start-routeCalculateByMinimalSpanningTree");
+        progressBar.setVisibility(View.VISIBLE); // Show the spinner
+        ArrayList<LatLng> solution = MinimalSpanningTree.findBestRoute(addressesArray, distanceArray, MainActivity.this);
+        if (solution.size() > 0) {
+//            solution.remove(0);
+            for (LatLng address : solution) {
+                String stringAddress = convertLatLngToAddress(address.latitude, address.longitude);
+                Log.d("mylog", "MinimalSpanningTree-address: " + stringAddress);
+            }
+        }
+        Log.d("mainFlow", "finish-routeCalculateByMinimalSpanningTree");
+        return solution;
+    }
+    public void calculateRoutesAndStartNavigation() {
+        Log.d("mainFlow", "start-calculateRoutesAndStartNavigation");
+        progressBar.setVisibility(View.VISIBLE); // Show the spinner
+        boolean flag = checkTimeConstrains();
+
+        if (flag) {
+            ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+            Callable<ArrayList<LatLng>> simulatedAnealingTask = new Callable<ArrayList<LatLng>>() {
+                @Override
+                public ArrayList<LatLng> call() throws Exception {
+                    return routeCalculateBySimulatedAnealing();
+                }
+            };
+
+            Callable<ArrayList<LatLng>> minimalSpanningTreeTask = new Callable<ArrayList<LatLng>>() {
+                @Override
+                public ArrayList<LatLng> call() throws Exception {
+                    return routeCalculateByMinimalSpanningTree();
+                }
+            };
+
+            Future<ArrayList<LatLng>> simulatedAnealingFuture = executorService.submit(simulatedAnealingTask);
+            Future<ArrayList<LatLng>> minimalSpanningTreeFuture = executorService.submit(minimalSpanningTreeTask);
+
+            try {
+                ArrayList<LatLng> simulatedAnealingResult = simulatedAnealingFuture.get();
+                ArrayList<LatLng> minimalSpanningTreeResult = minimalSpanningTreeFuture.get();
+
+                // Choose the route with the minimum length
+//                ArrayList<LatLng> selectedRoute;
+                if (calculateTotalDistance(simulatedAnealingResult) <= calculateTotalDistance(minimalSpanningTreeResult)) {
+                    addressesArray = new ArrayList<>(simulatedAnealingResult);
+                    Log.d("mylog", "simulatedAnealingResult selected");
+                } else {
+                    addressesArray = new ArrayList<>(minimalSpanningTreeResult);
+                    Log.d("mylog", "minimalSpanningTreeResult selected");
+
+                }
+                while (currentLatLng!=null && convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress( currentLatLng.latitude, currentLatLng.longitude))){
+                    Log.d("mylog", "removing 1st item: ");
+                    addressesArray.remove(0);
+                }
+                Log.d("mylog", "selectedRoute.get(0) "+convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude));
+
+
+                progressBar.setVisibility(View.GONE); // Show the spinner
+                if (addressesArray.size() > 0) {
+                    startNavigation(addressesArray.get(0));
+                } else {
+                    ShowNoRouteErrorMassage();
+                    validRoute = false;
+                }
+
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            } finally {
+                executorService.shutdown();
+            }
+        }
+        Log.d("mainFlow", "finish-calculateRoutesAndStartNavigation");
+    }
+
+    private int calculateTotalDistance(ArrayList<LatLng> route) {
+        Log.d("mainFlow", "start-calculateTotalDistance");
+        int totalDistance = 0;
+
+        for (int i = 0; i < route.size() - 1; i++) {
+            LatLng origin = route.get(i);
+            LatLng destination = route.get(i + 1);
+
+            for (Distance distance : distanceArray) {
+                if (origin.equals(distance.getOrigin()) && destination.equals(distance.getDestination())) {
+                    totalDistance += distance.getDistance();
+                    break;
+                }
+            }
+        }
+        Log.d("mainFlow", "finish-calculateTotalDistance");
+        return totalDistance;
+    }
+
+    private void showRouteDetailsDialog(LatLng destination) {
+        Log.d("mainFlow", "start-showRouteDetailsDialog");
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // Inflate the custom layout
+        View customLayout = getLayoutInflater().inflate(R.layout.custom_dialog_layout, null);
+        builder.setView(customLayout);
+
+        // Find the TextViews in the custom layout
+        TextView titleTextView = customLayout.findViewById(R.id.titleTextView);
+        TextView firstItemTextView = customLayout.findViewById(R.id.firstItemTextView);
+        TextView messageTextView = customLayout.findViewById(R.id.messageTextView);
+        LinearLayout firstItemLayout = customLayout.findViewById(R.id.firstItemLayout);
+
+        // Set title properties
+        titleTextView.setText("יתרת המסלול שלך היא");
+
+        // Set the first item properties
+        firstItemTextView.setText(convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude));
+        firstItemLayout.setBackgroundColor(Color.parseColor("#FF0000")); // Set background color for the first item
+
+        // Create a SpannableStringBuilder to apply styling to the route details
+        SpannableStringBuilder routeDetails = new SpannableStringBuilder();
+
+        for (int i = 1; i < addressesArray.size(); i++) {
+            String address = convertLatLngToAddress(addressesArray.get(i).latitude, addressesArray.get(i).longitude);
+            routeDetails.append(address);
+
+            if (i < addressesArray.size() - 1) {
+                routeDetails.append("\n"); // Add a newline between addresses
+            }
+        }
+
+        // Set the styled text to the TextView for the message
+        messageTextView.setText(routeDetails);
+
+        // Show the dialog
+        builder.show();
+        Log.d("mainFlow", "finish-showRouteDetailsDialog");
     }
 
     public static int factorial(int n) {
+        Log.d("mainFlow", "start-factorial");
         if (n <= 1) {
+            Log.d("mainFlow", "finish-factorial");
             return 1;
         }
         return n * factorial(n - 1);
@@ -850,9 +1100,8 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         Log.d("mylog", "onDistanceCalculationFailed: " + errorMessage);
     }
 
-    public static String convertLatLngToAddress(Context context, double latitude, double longitude) {
-        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
-
+    public static String convertLatLngToAddress( double latitude, double longitude) {
+        Log.d("mainFlow", "start-convertLatLngToAddress");
         try {
             List<android.location.Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
 
@@ -864,11 +1113,13 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         } catch (IOException e) {
             Log.d("mylog", "convertLatLngToAddress exception: ", e);
         }
+        Log.d("mainFlow", "finish-convertLatLngToAddress");
         return null;
     }
 
 
     public void saveToFirebaseHistory(ArrayList<LatLng> addressesArray, String title) {
+        Log.d("mainFlow", "start-saveToFirebaseHistory");
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         CollectionReference usersCollection = db.collection("users"); // Reference the "users" collection
         if(usersCollection == null){
@@ -943,15 +1194,18 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 }
             }
         });
+        Log.d("mainFlow", "finish-saveToFirebaseHistory");
     }
     // Function to convert an address string to LatLng coordinates
     public LatLng getLatLngFromAddress(Context context, String address) {
+        Log.d("mainFlow", "start-getLatLngFromAddress");
         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
         try {
             List<Address> addresses = geocoder.getFromLocationName(address, 1);
             if (addresses != null && !addresses.isEmpty()) {
                 double latitude = addresses.get(0).getLatitude();
                 double longitude = addresses.get(0).getLongitude();
+                Log.d("mainFlow", "finish-getLatLngFromAddress");
                 return new LatLng(latitude, longitude);
             }
         } catch (IOException e) {
@@ -962,6 +1216,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
 
     public void addView(String chosenAddress) {
+        Log.d("mainFlow", "start-addView");
         final EditText timeEditText = new EditText(MainActivity.this);
         timeEditText.setTag(chosenAddress);
         chosenAddressesList.add(chosenAddress);
@@ -1056,6 +1311,24 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             @Override
             public void onClick(View v) {
                 addressListLayout.removeView(addressLayout);
+                // Find the corresponding LatLng from the removed addressLayout
+                EditText removedAddress = (EditText) addressLayout.getTag();
+                String removedAddressString = (String) removedAddress.getTag();
+                Log.d("mylog", "removedAddress: "+removedAddressString);
+
+                // Remove the chosen address from addressesArray
+                Iterator<LatLng> iterator = addressesArray.iterator();
+                while (iterator.hasNext()) {
+                    LatLng latLng = iterator.next();
+                    // Replace LatLng with the actual data type of your coordinates
+                    // Adjust the condition based on your data structure
+                    if (Objects.equals(convertLatLngToAddress( latLng.latitude, latLng.longitude), removedAddress)) {
+                        Log.d("mylog", "removedAddress: "+convertLatLngToAddress( latLng.latitude, latLng.longitude));
+                        iterator.remove();
+                        break;
+                    }
+                }
+
                 if (addressListLayout.getChildCount() == 0) {
                     giveRouteButton.setBackgroundColor(0xCCCCCC);
                     giveRouteButton.setEnabled(false);
@@ -1076,11 +1349,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             giveRouteButton.setBackgroundColor(0xffcc0000);
             giveRouteButton.setEnabled(true);
         }
+        Log.d("mainFlow", "finish-addView");
     }
     // Declare AlertDialog as a member variable of your class
     private AlertDialog dialog;
-
     private void showChosenAddressesDialog(EditText timeEditText, String chosenAddress) {
+        Log.d("mainFlow", "start-showChosenAddressesDialog");
         String address = (String) timeEditText.getTag();
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setTitle("בחר כתובת");
@@ -1173,104 +1447,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 dialog.dismiss();
             }
         });
+        Log.d("mainFlow", "finish-showChosenAddressesDialog");
     }
-
-
-
-   /* private void showChosenAddressesDialog(EditText timeEditText, String chosenAddress) {
-        String address = (String) timeEditText.getTag();
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-        builder.setTitle("בחר כתובת");
-
-        // Inflate custom layout for the dialog content
-        View dialogView = getLayoutInflater().inflate(R.layout.custom_dialog_layout, null);
-        builder.setView(dialogView);
-
-        // Get the ListView from the custom layout
-        ListView listView = dialogView.findViewById(R.id.listView);
-
-        // Convert the list of chosen addresses to an array
-        final List<String> addressesList = new ArrayList<>(chosenAddressesList);
-        addressesList.remove(chosenAddress);
-        final String[] addressesArray = addressesList.toArray(new String[0]);
-
-        // Set up custom adapter
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, addressesArray) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                View view = super.getView(position, convertView, parent);
-                Log.d("mylog", "position: "+position);
-                // Get the current address
-                String currentAddress = addressesArray[position];
-                Log.d("mylog", "currentAddress: "+currentAddress);
-                Log.d("mylog", "chosenAddress: "+chosenAddress);
-                for (String addr : addressesArray) {
-                    if(ConstraintsArray != null && ConstraintsArray.size()>0){
-                        // Check if the current address matches the constraint
-                        LatLng constraintsAddrLatLng = getAddressConstraintByAddress(ConstraintsArray, getLatLngFromAddress(MainActivity.this, addr));
-                        //Log.d("mylog", "addr: "+addr);
-
-                        String constraintsAddr = convertLatLngToAddress(MainActivity.this, constraintsAddrLatLng.latitude, constraintsAddrLatLng.longitude);
-                        //Log.d("mylog", "constraintsAddr: "+constraintsAddr);
-                        // If the current address matches the constraint, apply your custom appearance
-                        //  if (constraintsAddr.equals(currentAddress)) {
-                        // Apply your custom appearance here
-                        view.setBackgroundColor(Color.YELLOW);
-                        //}
-                    }
-
-
-
-                }
-
-
-                return view;
-            }
-        };
-
-        // Set the adapter to the ListView
-        listView.setAdapter(adapter);
-
-        // Handle item click listener
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String selectedAddress = addressesArray[position];
-                // Handle the selected address from the dialog
-                //String selectedAddress = addressesArray[which];
-                // Perform any actions with the selected address
-                // For example, you can display it or use it in your application
-                boolean exists = false;
-                LatLng selectedAddressInLatLng = getLatLngFromAddress(MainActivity.this, selectedAddress);
-                LatLng addressInLatLng = getLatLngFromAddress(MainActivity.this, address);
-
-                for (Constraint constraint : ConstraintsArray) {
-                    if (constraint.address == addressInLatLng) {
-                        constraint.addressConstraint = getLatLngFromAddress(MainActivity.this, selectedAddress);
-                        exists = true;
-                        break;
-                    }
-                }
-                if (!exists) {
-                    Constraint constraint = new Constraint();
-                    constraint.setAddress(addressInLatLng);
-                    constraint.setAddressConstraint(selectedAddressInLatLng);
-                    constraint.setAddressString(selectedAddress);
-                    ConstraintsArray.add(constraint);
-                }
-                Toast.makeText(MainActivity.this, "Selected Address: " + selectedAddress, Toast.LENGTH_SHORT).show();
-
-            }
-        });
-
-        // Show the AlertDialog
-        builder.show();
-    }*/
-
-
 
     // Method to show TimePickerDialog
     private void showTimePickerDialog(final EditText timeEditText) {
+        Log.d("mainFlow", "start-showTimePickerDialog");
         Calendar currentTime = Calendar.getInstance();
         int hour = currentTime.get(Calendar.HOUR_OF_DAY);
         int minute = currentTime.get(Calendar.MINUTE);
@@ -1297,7 +1479,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         constraintTimeInSeconds -= curentTimeInSeconds;
                         boolean exists = false;
                         for (Constraint constraint : ConstraintsArray) {
-                            if (convertLatLngToAddress(MainActivity.this,constraint.address.latitude, constraint.address.longitude).equals(address)){
+                            if (convertLatLngToAddress(constraint.address.latitude, constraint.address.longitude).equals(address)){
                                 exists = true;
                                 constraint.timeConstraint = constraintTimeInSeconds;
                                 break;
@@ -1317,9 +1499,10 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 true // Set to true if you want the 24-hour format
         );
         timePickerDialog.show();
+        Log.d("mainFlow", "finish-showTimePickerDialog");
     }
-
     private void finishRoute() {
+        Log.d("mainFlow", "start-finishRoute");
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("סיימת את המסלול!");
         builder.setMessage("האפליקציה תיסגר בעוד מספר שניות.");
@@ -1340,9 +1523,11 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 handlerThread.quitSafely(); // Quit the handler thread
             }
         }, 5000); // 5000 milliseconds = 5 seconds
+        Log.d("mainFlow", "finish-finishRoute");
     }
 
     public void calculateDistance(){
+        Log.d("mainFlow", "start-calculateDistance");
         distanceArray = new ArrayList<>();
         int totalAddresses = addressesArray.size();
         expectedApiCalls = factorial(totalAddresses) / factorial(totalAddresses - 2);
@@ -1363,7 +1548,22 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 }
             }
         }
+        Log.d("mainFlow", "finish-calculateDistance");
     }
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        Log.d("mainFlow", "start-isMyServiceRunning");
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
+        // Iterate through the list of running services
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                Log.d("mainFlow", "finish-isMyServiceRunning");
+                // The service is running
+                return true;
+            }
+        }
 
+        // The service is not running
+        return false;
+    }
 }

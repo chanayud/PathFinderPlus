@@ -4,15 +4,19 @@ import static com.example.pathfinderplus.MainActivity.addressesArray;
 import static com.example.pathfinderplus.MainActivity.convertLatLngToAddress;
 import static com.example.pathfinderplus.MainActivity.distanceArray;
 import static com.example.pathfinderplus.MainActivity.factorial;
+//import static com.example.pathfinderplus.MainActivity.navigateToNextDest;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
@@ -29,17 +33,25 @@ import android.view.View;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class LocationMonitoringForegroundService extends Service implements LocationListener, GetDistanceTask.DistanceCallback{
+public class LocationMonitoringForegroundService extends Service implements LocationListener, GetDistanceTask.DistanceCallback {
 
     private boolean isServiceRunning = false;
 
@@ -59,15 +71,35 @@ public class LocationMonitoringForegroundService extends Service implements Loca
     private Runnable routeCalculationRunnable;
     int expectedApiCalls;
     private DistanceCalculator distanceCalculator;
+    boolean isTest = true;
+    com.google.android.gms.location.LocationCallback locationCallback;
+    FusedLocationProviderClient fusedLocationClient;
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
+    public Timer timer;
+    public boolean timer_running = false;
 
 
 
+    private BroadcastReceiver stopTimerReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d("mainFlow", "start-LocationMonitoringForegroundService-stopTimerReceiver");
+            if (intent.getAction() != null && intent.getAction().equals("STOP_TIMER_ACTION")) {
+                Log.d("mainFlow", "finish-stopTimerReceiver");
+                stopTimer();
+            }
+        }
+    };
 
 
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-onCreate");
+        newRoute = new ArrayList<>();
         distanceCalculator = new DistanceCalculator(this);
+        IntentFilter intentFilter = new IntentFilter("STOP_TIMER_ACTION");
+        LocalBroadcastManager.getInstance(this).registerReceiver(stopTimerReceiver, intentFilter);
 
         // Create the notification channel if running on Android Oreo (API level 26) or higher
         NotificationChannel channel = new NotificationChannel("1234", "service notification", NotificationManager.IMPORTANCE_DEFAULT);
@@ -75,43 +107,37 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         if (manager != null) {
             manager.createNotificationChannel(channel);
         }
-//        routeCalculationRunnable = new Runnable() {
-//            @Override
-//        public void run() {
-//            // Add your route calculation logic here
-//                Log.d("mylog", "run: 3 minutes past");
-//            checkAndCalculateRoute();
-//
-//            // Schedule the next execution after 3 minutes (180,000 milliseconds)
-//            handler.postDelayed(this, 180000);
-//        }
-//    };
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-onCreate");
     }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-onStartCommand");
         Log.d("MainActivity", "onStartCommand: intent: " + intent);
         if (!isServiceRunning) {
             isServiceRunning = true;
-            Timer timer = new Timer();
+            if (!timer_running) {
+                timer_running = true;
+                timer = new Timer();
+                timer.scheduleAtFixedRate(new TimerTask() {
+                    @Override
+                    public void run() {
+                        Log.d("mylog", "timer is here");
+                        checkAndCalculateRoute();
+                    }
+                }, 60000, 60000); // 60000 milliseconds = 1 minute
+            }
 
-            timer.scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    Log.d("mylog", "timer is here");
-                    checkAndCalculateRoute();
-                }}, 180000 ,180000); // 60000 milliseconds = 1 minute
-
-            try{
+                try {
 //            if (intent != null && intent.getAction() != null && intent.getAction().equals("START_NAVIGATION")) {
-                targetLatitude = intent.getDoubleExtra("DESTINATION_LATITUDE", 0.0);
-                targetLongitude = intent.getDoubleExtra("DESTINATION_LONGITUDE", 0.0);
-                JOB_ID = intent.getStringExtra("JOB_ID");
-                Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude + " JOB_ID: " + JOB_ID);
-            }
-            catch (Exception e){
-                Log.d("ex", "exception: " + e.getMessage());
-            }
-            handler.post(routeCalculationRunnable);
+                    targetLatitude = intent.getDoubleExtra("DESTINATION_LATITUDE", 0.0);
+                    targetLongitude = intent.getDoubleExtra("DESTINATION_LONGITUDE", 0.0);
+                    JOB_ID = intent.getStringExtra("JOB_ID");
+                    Log.d("MainActivity", "targetLatitude: " + targetLatitude + " targetLongitude: " + targetLongitude + " JOB_ID: " + JOB_ID);
+                } catch (Exception e) {
+                    Log.d("ex", "exception: " + e.getMessage());
+                }
+//            handler.post(routeCalculationRunnable);
 
 
             startLocationMonitoring();
@@ -119,11 +145,13 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             // Create a notification to make the service a foreground service
             createNotification();
         }
-            return START_STICKY;
-        }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-onStartCommand");
+        return START_STICKY;
+    }
 
 
     private void createNotification() {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-createNotification");
         Intent notificationIntent = new Intent(this, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
 
@@ -135,9 +163,11 @@ public class LocationMonitoringForegroundService extends Service implements Loca
                 .build();
 
         startForeground(NOTIFICATION_ID, notification);
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-createNotification");
     }
 
     private void startLocationMonitoring() {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-startLocationMonitoring");
         Log.d("MainActivity", "startLocationMonitoring");
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -150,6 +180,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         } else {
             Log.d("TAG", "startLocationMonitoring: Missing location permissions");
         }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-startLocationMonitoring");
     }
 
     @Override
@@ -159,6 +190,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 
     @Override
     public void onLocationChanged(Location location) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-onLocationChanged");
         Log.d("MainActivity", "onLocationChanged");
 
         double currentLatitude = location.getLatitude();
@@ -175,37 +207,21 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         if (distanceInMeters < TRIGGER_DISTANCE_METERS) {
             // Trigger action (launch MainActivity)
             Log.d("MainActivity", "distanceInMeters small");
-//            Intent broadcastIntent = new Intent("com.example.pathfinderplus.ACTION_TRIGGERED");
-//            broadcastIntent.putExtra("JOB_ID", JOB_ID);
-//            LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent);
-//            Log.d("MainActivity", "Broadcast sent");
-            notify(JOB_ID);
+            Notify(JOB_ID);
 
         }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-onLocationChanged");
     }
 
     private void checkAndCalculateRoute() {
-        int totalAddresses = addressesArray.size();
-        expectedApiCalls = factorial(totalAddresses) / factorial(totalAddresses - 2);
-        for (int i = 0; i < addressesArray.size(); i++) {
-            LatLng address1 = addressesArray.get(i);
-
-            for (int j = 0; j < addressesArray.size(); j++) {
-                if(j==i)
-                    continue;
-                LatLng address2 = addressesArray.get(j);
-
-                try {
-                    distanceCalculator.calculateDistance(address1, address2, expectedApiCalls, LocationMonitoringForegroundService.this);
-                } catch (IOException e) {
-                    Log.d("mylog", "exception: ", e);
-                }
-            }
-        }
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-checkAndCalculateRoute");
+        calculateDistance();
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-checkAndCalculateRoute");
     }
 
 
-    private void notify(String jobId) {
+    private void Notify(String jobId) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-Notify");
         Log.d("MainActivity", "Navigating to the next destination");
 
         // Create an intent to open your app when the notification is clicked
@@ -235,20 +251,11 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         }
 
 
-        // Build the notification with a button to go back to our app
-//        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "channel_id")
-//                .setContentTitle("Destination Reached")
-//                .setContentText("You have reached your destination.")
-//                .setSmallIcon(R.mipmap.ic_launcher)
-//                .setContentIntent(appPendingIntent)
-//                .setAutoCancel(true)
-//                .setPriority(NotificationCompat.PRIORITY_HIGH) // Set notification priority to high
-//                .setDefaults(NotificationCompat.DEFAULT_ALL); // Set default notification behaviors
 
         NotificationCompat.Builder notification = new NotificationCompat.Builder(this, "5678")
                 .setSmallIcon(R.drawable.icons8_notification)
-                .setContentTitle("Destination Reached")
-                .setContentText("You have reached your destination.")
+                .setContentTitle("הגעת!!!")
+                .setContentText("הגעת ליעד! לחץ כאן כדי לנווט ליעד הבא.")
                 .setContentIntent(appPendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_MAX) // Set notification priority to high
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -269,49 +276,28 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        notificationManagerCompat.notify(0, notification.build());
-
-
-        // Build the notification
-        //   Notification notification = notificationBuilder.build();
-
-        // Display the notification
-      /*  NotificationManager notificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (notificationManager != null) {
-            notificationManager.notify(jobId.hashCode(), notification);
-        }*/
-    }
-
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-        // Implement if needed
+        notificationManagerCompat.notify(5678, notification.build());
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-Notify");
     }
 
     @Override
-    public void onProviderEnabled(String provider) {
-        // Implement if needed
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-        // Implement if needed
-    }
-
-    @Override
-    public void onDistanceCalculated(Distance distance)
-
-    {
+    public void onDistanceCalculated(Distance distance) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-onDistanceCalculated");
+        if (isTest) {
+            Random random = new Random();
+            Random random1 = new Random();
+            int congestionFactor = random.nextInt(201) - 100; // Adjust the factor as needed
+            int congestionFactor1 = random.nextInt(201) - 100;
+            distance.setDistance((int) (distance.getDistance() * congestionFactor * congestionFactor1));
+        }
         distanceArray.add(distance);
+        Log.d("mylog", "expectedApiCalls IN OnDistanceCalculated: " + expectedApiCalls);
+        Log.d("mylog", "distanceArray.size: " + distanceArray.size());
+
+
         if (distanceArray.size() == expectedApiCalls) {
-            Log.d("mylog", "expectedApiCalls: "+expectedApiCalls);
             // The distanceArray should contain all the responses now
             for (int i = 0; i < distanceArray.size(); i++) {
-                // Do something with distanceArray.get(i) to process each response
-                Log.d("MYLOG", "Origin Address: " + distanceArray.get(i).getOriginAddress());
-                Log.d("MYLOG", "Destination Address: " + distanceArray.get(i).getDestinationAddress());
-                Log.d("MYLOG", "Distance: " + distanceArray.get(i).getDistance());
 
             }
             // Check the length of "AddressesArray"
@@ -319,26 +305,24 @@ public class LocationMonitoringForegroundService extends Service implements Loca
                 // Call the method for route calculation based on conditions
                 routeCalculateBySimulatedAnealing();
                 // Check if the new route is different from the existing one
-                }
-             else {
+            } else {
                 // Call the method for route calculation based on conditions
                 routeCalculateByNaiveAlgorithm();
             }
-                // Check if the new route is different from the existing one
-                if (!newRoute.equals(addressesArray)) {
-                    // Check if the new route is shorter
-                    if (isRouteShorter(newRoute, addressesArray)) {
-                        // Notify the user and update addressesArray if needed
-                        notifyUserAndHandleNewRoute(newRoute);
-                    }
+            // Check if the new route is different from the existing one
+            if (!newRoute.equals(addressesArray)) {
+                // Check if the new route is shorter
+                if (isRouteShorter(newRoute, addressesArray)) {
+                    // Notify the user and update addressesArray if needed
+                    notifyUserAndHandleNewRoute(newRoute);
                 }
             }
         }
-
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-onDistanceCalculated");
+    }
 
     @Override
     public void onDistanceCalculationFailed(String errorMessage) {
-
     }
 
     public class LocalBinder extends Binder {
@@ -348,55 +332,48 @@ public class LocationMonitoringForegroundService extends Service implements Loca
     }
 
     public void routeCalculateBySimulatedAnealing() {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-routeCalculateBySimulatedAnealing");
         new Thread(new Runnable() {
             @Override
             public void run() {
                 // Execute the code in a new thread
                 Log.d("MainActivity", "newRoute.size:" + newRoute.size());
 
-                ArrayList<LatLng> solution = TSPSolver.solveTSP(addressesArray, distanceArray);
+                newRoute = TSPSolver.solveTSP(addressesArray, distanceArray);
+                for (LatLng address : newRoute) {
+                    String stringAddress = convertLatLngToAddress( address.latitude, address.longitude);
+                    Log.d("mylog", "anealing-address: " + stringAddress);
+                }
+
                 //   addressesArray.clear();
-                newRoute = solution;
+//                newRoute = solution;
                 Log.d("mylog", "addressesArray: " + newRoute.get(0).latitude + " " + newRoute.get(0).longitude);
-                // Remove the first address since you've already reached it
-                // addressesArray.remove(0);
-                //  startNavigation(addressesArray.get(0));
-
-
-//                // Print the solution
-//                for (LatLng address : solution) {
-//                    String stringAddress = convertLatLngToAddress(, address.latitude, address.longitude);
-//                    Log.d("mylog", "anealing-address: "+ stringAddress);
-//                }
             }
         }).start();
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-routeCalculateBySimulatedAnealing");
     }
 
-    ;
-
     public void routeCalculateByNaiveAlgorithm() {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-routeCalculateByNaiveAlgorithm");
         Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
 
         newRoute = solveTSPnew();
-        // Print the solution
-//        for (LatLng address : newRoute) {
-//            String stringAddress = convertLatLngToAddress(MainActivity.this, address.latitude, address.longitude);
-//            Log.d("mylog", "naive-address: " + stringAddress);
-//        }
-//        if (addressesArray.size() > 1) {
-//            // Remove the first address since you've already reached it
-//            addressesArray.remove(0);
-//        }
+        for (LatLng address : addressesArray) {
+            String stringAddress = convertLatLngToAddress( address.latitude, address.longitude);
+            Log.d("mylog", "naive-address: " + stringAddress);
+        }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-routeCalculateByNaiveAlgorithm");
     }
 
     private double calculateRouteDistance(List<LatLng> route) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-calculateRouteDistance");
         double totalDistance = 0.0;
         for (int i = 0; i < route.size() - 1; i++) {
             LatLng current = route.get(i);
-            Log.d("distance", "current: " + convertLatLngToAddress(this, current.latitude, current.longitude));
+            Log.d("distance", "current: " + convertLatLngToAddress(current.latitude, current.longitude));
 
             LatLng next = route.get(i + 1);
-            Log.d("distance", "next: " + convertLatLngToAddress(this, next.latitude, next.longitude));
+            Log.d("distance", "next: " + convertLatLngToAddress(next.latitude, next.longitude));
 
             int distance = getDistanceBetween(current, next);
             Log.d("distance", "distance: " + distance);
@@ -404,18 +381,19 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             totalDistance += distance;
         }
         Log.d("distance", "totalDistance: " + totalDistance);
-
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-calculateRouteDistance");
         return totalDistance;
     }
 
     private int getDistanceBetween(LatLng source, LatLng destination) {
-        String sourceAddress = convertLatLngToAddress(this, source.latitude, source.longitude);
-        String destinationAddress = convertLatLngToAddress(this, destination.latitude, destination.longitude);
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-getDistanceBetween");
+        String sourceAddress = convertLatLngToAddress(source.latitude, source.longitude);
+        String destinationAddress = convertLatLngToAddress(destination.latitude, destination.longitude);
         Log.d("mylog", "getDisBetween: source: " + sourceAddress + " destination: " + destinationAddress);
 
         for (Distance d : distanceArray) {
-            String tempSource = convertLatLngToAddress(this, d.getOrigin().latitude, d.getOrigin().longitude);
-            String tempDestination = convertLatLngToAddress(this, d.getDestination().latitude, d.getDestination().longitude);
+            String tempSource = convertLatLngToAddress( d.getOrigin().latitude, d.getOrigin().longitude);
+            String tempDestination = convertLatLngToAddress( d.getDestination().latitude, d.getDestination().longitude);
             Log.d("mylog", "d: " + d.getDistance() + " tempSource: " + tempSource + " d.tempDestination: " + tempDestination);
             //  if (d.getOrigin().latitude == source.latitude && d.getOrigin().longitude == source.longitude  && d.getDestination().latitude == destination.latitude && d.getDestination().longitude == destination.longitude) {
             assert tempSource != null;
@@ -423,6 +401,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
                 assert tempDestination != null;
                 if (tempDestination.equals(destinationAddress)) {
                     Log.d("mylog", "getDistanceBetween: " + d.getDistance());
+                    Log.d("mainFlow", "finish-LocationMonitoringForegroundService-getDistanceBetween");
                     return d.getDistance();
                 }
             }
@@ -431,16 +410,22 @@ public class LocationMonitoringForegroundService extends Service implements Loca
     }
 
     private boolean isRouteShorter(ArrayList<LatLng> newRoute, ArrayList<LatLng> addressesArray) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-isRouteShorter");
         double newCalculation = calculateRouteDistance(newRoute);
         double existingCalculation = calculateRouteDistance(addressesArray);
-        if (newCalculation < existingCalculation)
+        Log.d("ShortestRoute", "newCalculation: "+newCalculation+" existingCalculation: "+existingCalculation);
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-isRouteShorter");
+        if (newCalculation < existingCalculation){
             return true;
+        }
         return false;
     }
 
     public ArrayList<LatLng> solveTSPnew() {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-solveTSPnew");
         LatLng sourceAddress = addressesArray.get(0);
-        addressesArray.remove(0);
+//        if (navigateToNextDest)
+            addressesArray.remove(0);
         List<ArrayList<LatLng>> permutations = generatePermutations(addressesArray, sourceAddress);
         double shortsetDistance = Integer.MAX_VALUE;
         double tempDistance;
@@ -452,17 +437,20 @@ public class LocationMonitoringForegroundService extends Service implements Loca
                 resultRoute = permutation;
             }
         }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-solveTSPnew");
         return resultRoute;
-
     }
 
     public static List<ArrayList<LatLng>> generatePermutations(ArrayList<LatLng> addressesArray, LatLng sourceAddress) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-generatePermutations");
         List<ArrayList<LatLng>> result = new ArrayList<>();
         generatePermutationsHelper(addressesArray, 0, result, sourceAddress);
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-generatePermutations");
         return result;
     }
 
     private static void generatePermutationsHelper(ArrayList<LatLng> array, int index, List<ArrayList<LatLng>> result, LatLng sourceAddress) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-generatePermutationsHelper");
         if (index == array.size() - 1) {
             // We reached the end of the array, add a copy to the result
             ArrayList<LatLng> resultArray = new ArrayList<>(array);
@@ -470,7 +458,6 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             result.add(resultArray);
             return;
         }
-
         for (int i = index; i < array.size(); i++) {
             // Swap elements at index and i
             LatLng temp = array.get(index);
@@ -485,23 +472,31 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             array.set(index, array.get(i));
             array.set(i, temp);
         }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-generatePermutationsHelper");
     }
 
     private void notifyUserAndHandleNewRoute(ArrayList<LatLng> newRoute) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-notifyUserAndHandleNewRoute");
         // Check if the new route is different from the existing addressesArray
-        showNotification("Shorter Route", "A shorter route is available. Tap to update.");
+//        showNotification("Shorter Route", "A shorter route is available. Tap to update.");
 
         // TODO: Handle user interaction (e.g., when the user taps the notification)
         // Launch an activity or use other UI elements to handle the user's choice
         launchRouteUpdateActivity(newRoute);
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-notifyUserAndHandleNewRoute");
     }
 
     private void launchRouteUpdateActivity(ArrayList<LatLng> newRoute) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-launchRouteUpdateActivity");
         // Launch the RouteUpdateActivity with the new route data
         Intent updateRouteIntent = new Intent(this, MainActivity.class);
-        updateRouteIntent.putParcelableArrayListExtra("NEW_ROUTE", newRoute);
+        updateRouteIntent.putExtra("newRoute", newRoute);
+
+        // Ensure unique requestCode for each PendingIntent
+        int requestCode = (int) System.currentTimeMillis();
+
         PendingIntent updatePendingIntent = PendingIntent.getActivity(
-                this, 0, updateRouteIntent, PendingIntent.FLAG_IMMUTABLE);
+                this, requestCode, updateRouteIntent, PendingIntent.FLAG_IMMUTABLE);
 
         // Build the notification action for updating the route
         NotificationCompat.Action updateAction =
@@ -512,8 +507,8 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         // Build the notification
         Notification notification = new NotificationCompat.Builder(this, "5678")
                 .setSmallIcon(R.drawable.icons8_notification)
-                .setContentTitle("Destination Reached")
-                .setContentText("You have reached your destination.")
+                .setContentTitle("עדכון מסלול")
+                .setContentText("מצאנו מסלול טוב יותר בשבילך! לחץ כאן כדי לעדכן מסלול.")
                 .addAction(updateAction) // Add the update action
                 .setPriority(NotificationCompat.PRIORITY_MAX) // Set notification priority to high
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -533,11 +528,13 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             return;
         }
         notificationManagerCompat.notify(0, notification);
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-launchRouteUpdateActivity");
     }
 
     // In your RouteUpdateActivity, handle the new route in its onCreate method
 
     private void showNotification(String title, String content) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-showNotification");
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, "5678")
                 .setSmallIcon(R.drawable.icons8_notification)
                 .setContentTitle(title)
@@ -558,7 +555,114 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             return;
         }
         notificationManagerCompat.notify(0, notificationBuilder.build());
-        }
-
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-showNotification");
     }
+
+    public void addCurrentLocation() {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-addCurrentLocation");
+        Log.d("MainActivity", "in addCurrentLocation");
+            // Check for permission and request if needed
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_PERMISSION_REQUEST_CODE);
+            } else {
+                // Permission already granted, proceed to get the current location
+                // Define location request parameters
+                LocationRequest locationRequest = LocationRequest.create();
+                locationRequest.setPriority(Priority.PRIORITY_HIGH_ACCURACY);
+                locationRequest.setInterval(10000); // Interval in milliseconds
+
+                locationCallback = new com.google.android.gms.location.LocationCallback() {
+
+
+                    @Override
+                    public void onLocationResult(LocationResult locationResult) {
+                        if (locationResult == null) {
+                            Log.d("MainActivity", "locationResult is null");
+                            return;
+                        }
+                        Location location = locationResult.getLastLocation();
+                        if(location == null){
+                            Log.d("MainActivity", "location is null");
+                        }
+                        if (location != null) {
+                            stopLocationUpdates();
+                            // Got the current location
+                            LatLng currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+                            // Add the current location to the addressesArray at the first position
+                            if (addressesArray.get(0).latitude != currentLatLng.latitude && addressesArray.get(0).longitude != currentLatLng.longitude)
+                                addressesArray.add(0, currentLatLng);
+                            Log.d("MainActivity", "in addCurrentLocation - add to addressArray - current location: "+addressesArray.get(0));
+                        }
+
+                    }
+
+                };
+                startLocationUpdates(locationRequest, locationCallback);
+
+            }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-addCurrentLocation");
+    }
+
+
+    public void stopLocationUpdates() {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-stopLocationUpdates");
+        if (fusedLocationClient != null && locationCallback != null) {
+            fusedLocationClient.removeLocationUpdates((com.google.android.gms.location.LocationCallback) locationCallback);
+        }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-stopLocationUpdates");
+    }
+
+    public void calculateDistance(){
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-calculateDistance");
+        distanceArray.clear();
+        int totalAddresses = addressesArray.size();
+        Log.d("mylog", "addressesArray.size: " + addressesArray.size());
+        expectedApiCalls = factorial(totalAddresses) / factorial(totalAddresses - 2);
+        Log.d("mylog", "expectedApiCalls: " + expectedApiCalls);
+        for (int i = 0; i < addressesArray.size(); i++) {
+            LatLng address1 = addressesArray.get(i);
+
+            for (int j = 0; j < addressesArray.size(); j++) {
+                if (j == i)
+                    continue;
+                LatLng address2 = addressesArray.get(j);
+                try {
+                    distanceCalculator.calculateDistance(address1, address2, expectedApiCalls, LocationMonitoringForegroundService.this);
+                } catch (IOException e) {
+                    Log.d("mylog", "exception: ", e);
+                }
+            }
+        }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-calculateDistance");
+    }
+
+    private void startLocationUpdates(LocationRequest locationRequest, LocationCallback locationCallback) {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-startLocationUpdates");
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.d("MainActivity", "missed required permission");
+            return;
+        }
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-calculateDistance");
+    }
+
+    public void stopTimer() {
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-stopTimer");
+        Log.d("mylog", "stopping Timer");
+        if (timer != null) {
+            timer.cancel();
+            timer.purge();
+            timer_running = false;
+        }
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-stopTimer");
+    }
+    public void onDestroy() {
+        super.onDestroy();
+        Log.d("mainFlow", "start-LocationMonitoringForegroundService-onDestroy");
+        // Unregister the receiver in onDestroy
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(stopTimerReceiver);
+        Log.d("mainFlow", "finish-LocationMonitoringForegroundService-onDestroy");
+    }
+}
 

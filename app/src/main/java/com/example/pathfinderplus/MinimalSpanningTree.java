@@ -38,6 +38,7 @@ public class MinimalSpanningTree {
 
     // Function to find the minimal spanning tree using Prim's algorithm
     private static ArrayList<Edge> findMST(ArrayList<Edge>[] graph) {
+        Log.d("parralele", "routeCalculateByMinimalSpanningTree: parralele3 "+graph[0]);
         PriorityQueue<Edge> minHeap = new PriorityQueue<>();
         ArrayList<Edge> result = new ArrayList<>();
         boolean[] visited = new boolean[graph.length];
@@ -70,6 +71,7 @@ public class MinimalSpanningTree {
 // Function to find the best route based on MST
 // Function to find the best route based on MST
     public static ArrayList<LatLng> findBestRoute(ArrayList<LatLng> addresses, ArrayList<Distance> distances, Context context) {
+        Log.d("parralele", "routeCalculateByMinimalSpanningTree: parralele2");
         int n = addresses.size();
         ArrayList<Edge>[] graph = new ArrayList[n];
 
