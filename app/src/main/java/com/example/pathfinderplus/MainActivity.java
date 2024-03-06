@@ -163,6 +163,9 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             stopService(serviceIntent);
                 if(addressesArray.size()>1){
                     addressesArray.remove(0);
+                    if(addressesArray.size() == 1){
+                        startNavigation(addressesArray.get(0));
+                    }
                     calculateDistance();
                 }
                 else
@@ -640,27 +643,27 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
         boolean tempFlag = checkTimeConstrains();
         if (tempFlag) {
-            addressesArray = new ArrayList<>(solveTSPnew());
-            if (addressesArray.size() == 0) {
+            ArrayList <LatLng> temp = new ArrayList<>(solveTSPnew());
+            if (temp.size() == 0) {
                 ShowNoRouteErrorMassage();
                 progressBar.setVisibility(View.GONE); // Show the spinner
             } else {
                 // Print the solution
-                for (LatLng address : addressesArray) {
+                for (LatLng address : temp) {
                     String stringAddress = convertLatLngToAddress( address.latitude, address.longitude);
                     Log.d("mylog", "naive-address: " + stringAddress);
                 }
-                if (addressesArray.size() > 1) {
-                    // Remove the first address since you've already reached it
-                    addressesArray.remove(0);
-                }
+//                if (temp.size() > 1) {
+//                    // Remove the first address since you've already reached it
+//                    temp.remove(0);
+//                }
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         progressBar.setVisibility(View.GONE); // Dismiss the spinner
                     }
                 });
-//                Log.d("mylog", "before startNavigation1: "+convertLatLngToAddress(this,addressesArray.get(0).latitude, addressesArray.get(0).longitude)+" currentLatLng: "+convertLatLngToAddress(this, currentLatLng.latitude, currentLatLng.longitude));
+                addressesArray = new ArrayList<>(temp);
                 if (currentLatLng!=null && convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress(currentLatLng.latitude, currentLatLng.longitude))){
                     Log.d("mylog", "removing 1st item: ");
                     addressesArray.remove(0);
@@ -674,9 +677,10 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
     public ArrayList<LatLng> solveTSPnew() {
         Log.d("mainFlow", "start-solveTSPnew");
-        LatLng sourceAddress = addressesArray.get(0);
-        addressesArray.remove(0);
-        List<ArrayList<LatLng>> permutations = generatePermutations(addressesArray, sourceAddress);
+        ArrayList<LatLng> addressesArrayTemp = new ArrayList<>(MainActivity.addressesArray);
+        LatLng sourceAddress = addressesArrayTemp.get(0);
+        addressesArrayTemp.remove(0);
+        List<ArrayList<LatLng>> permutations = generatePermutations(addressesArrayTemp, sourceAddress);
         double shortsetDistance = Double.MAX_VALUE;
         ArrayList<LatLng> resultRoute = new ArrayList<>();
         for(ArrayList<LatLng> permutation : permutations){
@@ -1015,7 +1019,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     ShowNoRouteErrorMassage();
                     validRoute = false;
                 }
-
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             } finally {

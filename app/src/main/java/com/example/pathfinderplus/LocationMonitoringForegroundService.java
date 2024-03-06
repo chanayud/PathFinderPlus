@@ -423,10 +423,11 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 
     public ArrayList<LatLng> solveTSPnew() {
         Log.d("mainFlow", "start-LocationMonitoringForegroundService-solveTSPnew");
-        LatLng sourceAddress = addressesArray.get(0);
+        ArrayList<LatLng> addressesArrayTemp = new ArrayList<>(addressesArray);
+        LatLng sourceAddress = addressesArrayTemp.get(0);
 //        if (navigateToNextDest)
-            addressesArray.remove(0);
-        List<ArrayList<LatLng>> permutations = generatePermutations(addressesArray, sourceAddress);
+        addressesArrayTemp.remove(0);
+        List<ArrayList<LatLng>> permutations = generatePermutations(addressesArrayTemp, sourceAddress);
         double shortsetDistance = Integer.MAX_VALUE;
         double tempDistance;
         ArrayList<LatLng> resultRoute = new ArrayList<>();
@@ -660,6 +661,9 @@ public class LocationMonitoringForegroundService extends Service implements Loca
     public void onDestroy() {
         super.onDestroy();
         Log.d("mainFlow", "start-LocationMonitoringForegroundService-onDestroy");
+        NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(this);
+        notificationManagerCompat.cancel(5678);
+        notificationManagerCompat.cancel(1234);
         // Unregister the receiver in onDestroy
         LocalBroadcastManager.getInstance(this).unregisterReceiver(stopTimerReceiver);
         Log.d("mainFlow", "finish-LocationMonitoringForegroundService-onDestroy");
