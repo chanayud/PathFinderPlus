@@ -515,50 +515,11 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
     public ArrayList<LatLng> routeCalculateBySimulatedAnealing(){
         Log.d("mainFlow", "start-routeCalculateBySimulatedAnealing");
-//        progressBar.setVisibility(View.VISIBLE); // Show the spinner
-//        boolean syncFlag = true;
-//        boolean flag = checkTimeConstrains();
-//        if (flag) {
-//            new Thread(new Runnable() {
-//                @Override
-//                public void run() {
-//                     Execute the code in a new thread
-//                    Log.d("MainActivity", "addressesArray.size:" + addressesArray.size());
-
-//                    ArrayList<LatLng> solution = TSPSolver.solveTSP(addressesArray, distanceArray);
-//                    if (solution.size() == 0) {
-//                        runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
-//                                ShowNoRouteErrorMassage();
-//                            }
-//                        });
-//                        validRoute = false;
-//                    } else {
-                        //   addressesArray.clear();
         Log.d("mylog", "addressesArray.size:" + addressesArray.size());
 
         SASolution = TSPSolver.solveTSP(addressesArray, distanceArray);
         Log.d("mylog", "SASolution.size:" + SASolution.size());
         if (SASolution.size()>0) {
-//            SASolution.remove(0);
-
-//        addressesArray = new ArrayList<>(solution);
-//                        Log.d("mylog", "addressesArray: " + addressesArray.get(0).latitude + " " + addressesArray.get(0).longitude);
-                        // Remove the first address since you've already reached it
-//                        addressesArray.remove(0);
-//                        runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                progressBar.setVisibility(View.GONE); // Dismiss the spinner
-//                            }
-//                        });
-//                        Log.d("mylog", "before startNavigation1: "+convertLatLngToAddress(MainActivity.this,addressesArray.get(0).latitude, addressesArray.get(0).longitude)+" currentLatLng: "+convertLatLngToAddress(MainActivity.this, currentLatLng.latitude, currentLatLng.longitude));
-//                        Log.d("mylog", "before startNavigation2: "+convertLatLngToAddress(MainActivity.this,addressesArray.get(0).latitude, addressesArray.get(0).longitude));
-//                        startNavigation(addressesArray.get(0));
-
-
                         // Print the solution
                         for (LatLng address : SASolution) {
                             String stringAddress = convertLatLngToAddress(address.latitude, address.longitude);
@@ -566,7 +527,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                         }
                     }
 //                }
-//            }).start();
         Log.d("mainFlow", "finish-routeCalculateBySimulatedAnealing");
         return SASolution;
 //        }
@@ -957,7 +917,6 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         progressBar.setVisibility(View.VISIBLE); // Show the spinner
         ArrayList<LatLng> solution = MinimalSpanningTree.findBestRoute(addressesArray, distanceArray, MainActivity.this);
         if (solution.size() > 0) {
-//            solution.remove(0);
             for (LatLng address : solution) {
                 String stringAddress = convertLatLngToAddress(address.latitude, address.longitude);
                 Log.d("mylog", "MinimalSpanningTree-address: " + stringAddress);

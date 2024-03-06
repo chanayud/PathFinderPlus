@@ -50,6 +50,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class LocationMonitoringForegroundService extends Service implements LocationListener, GetDistanceTask.DistanceCallback {
 
@@ -303,7 +308,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             // Check the length of "AddressesArray"
             if (addressesArray.size() > 5) {
                 // Call the method for route calculation based on conditions
-                routeCalculateBySimulatedAnealing();
+                calculateRoute();
                 // Check if the new route is different from the existing one
             } else {
                 // Call the method for route calculation based on conditions
@@ -331,7 +336,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         }
     }
 
-    public void routeCalculateBySimulatedAnealing() {
+    public ArrayList<LatLng> routeCalculateBySimulatedAnealing() {
         Log.d("mainFlow", "start-LocationMonitoringForegroundService-routeCalculateBySimulatedAnealing");
         new Thread(new Runnable() {
             @Override
@@ -351,6 +356,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             }
         }).start();
         Log.d("mainFlow", "finish-LocationMonitoringForegroundService-routeCalculateBySimulatedAnealing");
+        return newRoute;
     }
 
     public void routeCalculateByNaiveAlgorithm() {
@@ -668,5 +674,83 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         LocalBroadcastManager.getInstance(this).unregisterReceiver(stopTimerReceiver);
         Log.d("mainFlow", "finish-LocationMonitoringForegroundService-onDestroy");
     }
+
+    public void calculateRoute() {
+        Log.d("mainFlow", "start-calculateRoutesAndStartNavigation");
+
+            ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+            Callable<ArrayList<LatLng>> simulatedAnealingTask = new Callable<ArrayList<LatLng>>() {
+                @Override
+                public ArrayList<LatLng> call() throws Exception {
+                    return routeCalculateBySimulatedAnealing();
+                }
+            };
+
+            Callable<ArrayList<LatLng>> minimalSpanningTreeTask = new Callable<ArrayList<LatLng>>() {
+                @Override
+                public ArrayList<LatLng> call() throws Exception {
+                    return routeCalculateByMinimalSpanningTree();
+                }
+            };
+
+            Future<ArrayList<LatLng>> simulatedAnealingFuture = executorService.submit(simulatedAnealingTask);
+            Future<ArrayList<LatLng>> minimalSpanningTreeFuture = executorService.submit(minimalSpanningTreeTask);
+
+            try {
+                ArrayList<LatLng> simulatedAnealingResult = simulatedAnealingFuture.get();
+                ArrayList<LatLng> minimalSpanningTreeResult = minimalSpanningTreeFuture.get();
+
+                // Choose the route with the minimum length
+//                ArrayList<LatLng> selectedRoute;
+                if (calculateTotalDistance(simulatedAnealingResult) <= calculateTotalDistance(minimalSpanningTreeResult)) {
+                    newRoute = new ArrayList<>(simulatedAnealingResult);
+                    Log.d("mylog", "simulatedAnealingResult selected");
+                } else {
+                    newRoute = new ArrayList<>(minimalSpanningTreeResult);
+                    Log.d("mylog", "minimalSpanningTreeResult selected");
+
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            } finally {
+                executorService.shutdown();
+            }
+        Log.d("mainFlow", "finish-calculateRoutesAndStartNavigation");
+    }
+
+    private int calculateTotalDistance(ArrayList<LatLng> route) {
+        Log.d("mainFlow", "start-calculateTotalDistance");
+        int totalDistance = 0;
+
+        for (int i = 0; i < route.size() - 1; i++) {
+            LatLng origin = route.get(i);
+            LatLng destination = route.get(i + 1);
+
+            for (Distance distance : distanceArray) {
+                if (origin.equals(distance.getOrigin()) && destination.equals(distance.getDestination())) {
+                    totalDistance += distance.getDistance();
+                    break;
+                }
+            }
+        }
+        Log.d("mainFlow", "finish-calculateTotalDistance");
+        return totalDistance;
+    }
+    public ArrayList<LatLng> routeCalculateByMinimalSpanningTree() {
+        Log.d("mainFlow", "start-routeCalculateByMinimalSpanningTree");
+        ArrayList<LatLng> solution = MinimalSpanningTree.findBestRoute(addressesArray, distanceArray, this);
+        if (solution.size() > 0) {
+            for (LatLng address : solution) {
+                String stringAddress = convertLatLngToAddress(address.latitude, address.longitude);
+                Log.d("mylog", "MinimalSpanningTree-address: " + stringAddress);
+            }
+        }
+        Log.d("mainFlow", "finish-routeCalculateByMinimalSpanningTree");
+        return solution;
+    }
+
+
+
 }
 
