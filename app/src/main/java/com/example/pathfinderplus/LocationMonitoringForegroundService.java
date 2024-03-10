@@ -58,7 +58,7 @@ import java.util.concurrent.Future;
 
 public class LocationMonitoringForegroundService extends Service implements LocationListener, GetDistanceTask.DistanceCallback {
 
-    private boolean isServiceRunning = false;
+    private static boolean isServiceRunning = false;
 
 
     private static final int TRIGGER_DISTANCE_METERS = 100;
@@ -82,6 +82,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
     public Timer timer;
     public boolean timer_running = false;
+    public static boolean ifNotify = false;
 
 
 
@@ -121,17 +122,22 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         Log.d("MainActivity", "onStartCommand: intent: " + intent);
         if (!isServiceRunning) {
             isServiceRunning = true;
-            if (!timer_running) {
-                timer_running = true;
-                timer = new Timer();
-                timer.scheduleAtFixedRate(new TimerTask() {
-                    @Override
-                    public void run() {
-                        Log.d("mylog", "timer is here");
-                        checkAndCalculateRoute();
-                    }
-                }, 60000, 60000); // 60000 milliseconds = 1 minute
-            }
+            try {
+                if (!timer_running) {
+                    timer_running = true;
+                    timer = new Timer();
+                    timer.scheduleAtFixedRate(new TimerTask() {
+                        @Override
+                        public void run() {
+                            Log.d("mylog", "timer is here");
+                            checkAndCalculateRoute();
+                            if (ifNotify){
+                                NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(LocationMonitoringForegroundService.this);
+                                ifNotify = false;
+                            }
+                        }
+                    }, 60000, 60000); // 60000 milliseconds = 1 minute
+                }
 
                 try {
 //            if (intent != null && intent.getAction() != null && intent.getAction().equals("START_NAVIGATION")) {
@@ -145,11 +151,16 @@ public class LocationMonitoringForegroundService extends Service implements Loca
 //            handler.post(routeCalculationRunnable);
 
 
-            startLocationMonitoring();
+                startLocationMonitoring();
 
-            // Create a notification to make the service a foreground service
-            createNotification();
+                // Create a notification to make the service a foreground service
+                createNotification();
+            }
+            finally {
+                isServiceRunning = false;
+            }
         }
+
         Log.d("mainFlow", "finish-LocationMonitoringForegroundService-onStartCommand");
         return START_STICKY;
     }
@@ -282,6 +293,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             return;
         }
         notificationManagerCompat.notify(5678, notification.build());
+        ifNotify = true;
         Log.d("mainFlow", "finish-LocationMonitoringForegroundService-Notify");
     }
 
@@ -534,7 +546,7 @@ public class LocationMonitoringForegroundService extends Service implements Loca
             // for ActivityCompat#requestPermissions for more details.
             return;
         }
-        notificationManagerCompat.notify(0, notification);
+        notificationManagerCompat.notify(1111, notification);
         Log.d("mainFlow", "finish-LocationMonitoringForegroundService-launchRouteUpdateActivity");
     }
 
@@ -665,14 +677,16 @@ public class LocationMonitoringForegroundService extends Service implements Loca
         Log.d("mainFlow", "finish-LocationMonitoringForegroundService-stopTimer");
     }
     public void onDestroy() {
-        super.onDestroy();
+        stopTimer();
         Log.d("mainFlow", "start-LocationMonitoringForegroundService-onDestroy");
         NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(this);
         notificationManagerCompat.cancel(5678);
+        notificationManagerCompat.cancel(1111);
         notificationManagerCompat.cancel(1234);
         // Unregister the receiver in onDestroy
         LocalBroadcastManager.getInstance(this).unregisterReceiver(stopTimerReceiver);
         Log.d("mainFlow", "finish-LocationMonitoringForegroundService-onDestroy");
+        super.onDestroy();
     }
 
     public void calculateRoute() {

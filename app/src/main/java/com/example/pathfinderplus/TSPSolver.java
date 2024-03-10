@@ -2,6 +2,7 @@ package com.example.pathfinderplus;
 
 import static com.example.pathfinderplus.MainActivity.ConstraintsArray;
 import static com.example.pathfinderplus.MainActivity.addressesArray;
+import static com.example.pathfinderplus.MainActivity.convertLatLngToAddress;
 import static com.example.pathfinderplus.MainActivity.distanceArray;
 
 import android.util.Log;
@@ -39,9 +40,11 @@ public class TSPSolver {
                 int index1, index2;
                 do {
                     index1 = getRandomIndex(newSolution.size());
+                    Log.d("test", "solveTSP1: "+convertLatLngToAddress(newSolution.get(0).latitude, newSolution.get(0).longitude));
                 } while (index1 == 0);
                 do {
                     index2 = getRandomIndex(newSolution.size());
+                    Log.d("test", "solveTSP2: "+convertLatLngToAddress(newSolution.get(0).latitude, newSolution.get(0).longitude));
                 } while (index2 == 0);
 
                 // Swap two cities in the new solution

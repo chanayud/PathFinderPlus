@@ -164,7 +164,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                 if(addressesArray.size()>1){
                     addressesArray.remove(0);
                     if(addressesArray.size() == 1){
-                        startNavigation(addressesArray.get(0));
+                        startNavigation(addressesArray.get(1));
                     }
                     calculateDistance();
                 }
@@ -196,7 +196,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 //                        Log.d("mylog", "before startNavigation1: "+convertLatLngToAddress(this,addressesArray.get(0).latitude, addressesArray.get(0).longitude)+" currentLatLng: "+convertLatLngToAddress(this, currentLatLng.latitude, currentLatLng.longitude));
                     Log.d("mylog", "addressesArray.get(0): "+addressesArray.get(0));
                     stopService(serviceIntent);
-                    startNavigation(addressesArray.get(0));
+                    startNavigation(addressesArray.get(1));
                 }
             }
             if (!Places.isInitialized()) {
@@ -628,8 +628,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     Log.d("mylog", "removing 1st item: ");
                     addressesArray.remove(0);
                 }
+                for (LatLng address : addressesArray) {
+                    String stringAddress = convertLatLngToAddress(address.latitude, address.longitude);
+                    Log.d("printAddressesArray", "naive-address-print: " + stringAddress);
+                }
 //                Log.d("mylog", "before startNavigation2: "+convertLatLngToAddress(this,addressesArray.get(0).latitude, addressesArray.get(0).longitude));
-                startNavigation(addressesArray.get(0));
+                startNavigation(addressesArray.get(1));
             }
         }
         Log.d("mainFlow", "finish-routeCalculateByNaiveAlgorithm");
@@ -790,13 +794,13 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             }
         });
 //        Log.d("mylog", "before startNavigation1: "+convertLatLngToAddress(this,shortestRoute.get(0).latitude, shortestRoute.get(0).longitude)+" currentLatLng: "+convertLatLngToAddress(this, currentLatLng.latitude, currentLatLng.longitude));
-        if (currentLatLng!=null && convertLatLngToAddress(shortestRoute.get(0).latitude, shortestRoute.get(0).longitude).equals(convertLatLngToAddress( currentLatLng.latitude, currentLatLng.longitude))){
-            Log.d("mylog", "removing 1st item: ");
-            shortestRoute.remove(0);
-        }
+//        if (currentLatLng!=null && convertLatLngToAddress(shortestRoute.get(0).latitude, shortestRoute.get(0).longitude).equals(convertLatLngToAddress( currentLatLng.latitude, currentLatLng.longitude))){
+//            Log.d("mylog", "removing 1st item: ");
+//            shortestRoute.remove(0);
+//        }
 
 //        Log.d("mylog", "before startNavigation2: "+convertLatLngToAddress(this,shortestRoute.get(0).latitude, shortestRoute.get(0).longitude));
-        startNavigation(shortestRoute.get(0));
+        startNavigation(shortestRoute.get(1));
         Log.d("mainFlow", "finish-solveTSP");
     }
 
@@ -964,7 +968,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                     Log.d("mylog", "minimalSpanningTreeResult selected");
 
                 }
-                while (currentLatLng!=null && convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress( currentLatLng.latitude, currentLatLng.longitude))){
+                if (currentLatLng!=null && convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress( currentLatLng.latitude, currentLatLng.longitude))){
                     Log.d("mylog", "removing 1st item: ");
                     addressesArray.remove(0);
                 }
@@ -973,7 +977,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
                 progressBar.setVisibility(View.GONE); // Show the spinner
                 if (addressesArray.size() > 0) {
-                    startNavigation(addressesArray.get(0));
+                    startNavigation(addressesArray.get(1));
                 } else {
                     ShowNoRouteErrorMassage();
                     validRoute = false;
