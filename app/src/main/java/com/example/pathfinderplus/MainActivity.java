@@ -161,15 +161,15 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         if (intent != null && "START_NAVIGATION".equals(intent.getAction())) {
             Log.d("MainActivity", "stop service here");
             stopService(serviceIntent);
-                if(addressesArray.size()>1){
-                    addressesArray.remove(0);
-                    if(addressesArray.size() == 1){
-                        startNavigation(addressesArray.get(1));
-                    }
-                    calculateDistance();
+            if(addressesArray.size()>1){
+                addressesArray.remove(0);
+                if(addressesArray.size() == 1){
+                    startNavigation(addressesArray.get(1));
                 }
-                else
-                    finishRoute();
+                calculateDistance();
+            }
+            else
+                finishRoute();
         } else {
             if (intent != null) {
                 ArrayList<String> addresses = intent.getStringArrayListExtra("addresses");
@@ -433,8 +433,8 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                             currentLatLng = new LatLng(location.getLatitude(), location.getLongitude());
                             // Add the current location to the addressesArray at the first position
                             if (!convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress(currentLatLng.latitude, currentLatLng.longitude)))
-                            if (!convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress(currentLatLng.latitude, currentLatLng.longitude)))
-                                addressesArray.add(0, currentLatLng);
+                                if (!convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude).equals(convertLatLngToAddress(currentLatLng.latitude, currentLatLng.longitude)))
+                                    addressesArray.add(0, currentLatLng);
                             Log.d("MainActivity", "in addCurrentLocation - add to addressArray - current location: "+addressesArray.get(0));
                             calculateDistance();
                         }
@@ -504,14 +504,14 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         Log.d("mainFlow", "start-onRequestPermissionsResult");
         if(requestCode == 1) {
-                ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_BACKGROUND_LOCATION"}, MY_PERMISSIONS_REQUEST_BACKGROUND_LOCATION);
-                Log.d("MainActivity", "onRequestPermissionsResult: " + requestCode);
-            }
-            else if(requestCode == 2) {
-                addCurrentLocation();
-            }
+            ActivityCompat.requestPermissions(this, new String[]{"android.permission.ACCESS_BACKGROUND_LOCATION"}, MY_PERMISSIONS_REQUEST_BACKGROUND_LOCATION);
+            Log.d("MainActivity", "onRequestPermissionsResult: " + requestCode);
+        }
+        else if(requestCode == 2) {
+            addCurrentLocation();
+        }
         Log.d("mainFlow", "finish-onRequestPermissionsResult");
-            }
+    }
 
     public ArrayList<LatLng> routeCalculateBySimulatedAnealing(){
         Log.d("mainFlow", "start-routeCalculateBySimulatedAnealing");
@@ -520,12 +520,12 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         SASolution = TSPSolver.solveTSP(addressesArray, distanceArray);
         Log.d("mylog", "SASolution.size:" + SASolution.size());
         if (SASolution.size()>0) {
-                        // Print the solution
-                        for (LatLng address : SASolution) {
-                            String stringAddress = convertLatLngToAddress(address.latitude, address.longitude);
-                            Log.d("mylog", "anealing-address: " + stringAddress);
-                        }
-                    }
+            // Print the solution
+            for (LatLng address : SASolution) {
+                String stringAddress = convertLatLngToAddress(address.latitude, address.longitude);
+                Log.d("mylog", "anealing-address: " + stringAddress);
+            }
+        }
 //                }
         Log.d("mainFlow", "finish-routeCalculateBySimulatedAnealing");
         return SASolution;
@@ -842,7 +842,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             String tempSource = convertLatLngToAddress( d.getOrigin().latitude, d.getOrigin().longitude);
             String tempDestination = convertLatLngToAddress( d.getDestination().latitude, d.getDestination().longitude);
             Log.d("mylog", "d: "+d.getDistance() + " tempSource: "+tempSource+" d.tempDestination: "+tempDestination);
-          //  if (d.getOrigin().latitude == source.latitude && d.getOrigin().longitude == source.longitude  && d.getDestination().latitude == destination.latitude && d.getDestination().longitude == destination.longitude) {
+            //  if (d.getOrigin().latitude == source.latitude && d.getOrigin().longitude == source.longitude  && d.getDestination().latitude == destination.latitude && d.getDestination().longitude == destination.longitude) {
             assert tempSource != null;
             if(tempSource.equals(sourceAddress)) {
                 assert tempDestination != null;
@@ -1014,6 +1014,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         Log.d("mainFlow", "start-showRouteDetailsDialog");
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
+
         // Inflate the custom layout
         View customLayout = getLayoutInflater().inflate(R.layout.custom_dialog_layout, null);
         builder.setView(customLayout);
@@ -1029,7 +1030,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
 
         // Set the first item properties
         firstItemTextView.setText(convertLatLngToAddress(addressesArray.get(0).latitude, addressesArray.get(0).longitude));
-        firstItemLayout.setBackgroundColor(Color.parseColor("#FF0000")); // Set background color for the first item
+        firstItemLayout.setBackgroundColor(Color.parseColor("#80cc0000")); // Set background color for the first item
 
         // Create a SpannableStringBuilder to apply styling to the route details
         SpannableStringBuilder routeDetails = new SpannableStringBuilder();
@@ -1184,6 +1185,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     public void addView(String chosenAddress) {
         Log.d("mainFlow", "start-addView");
         final EditText timeEditText = new EditText(MainActivity.this);
+        final EditText positionEditText  = new EditText(MainActivity.this);
         timeEditText.setTag(chosenAddress);
         chosenAddressesList.add(chosenAddress);
         LinearLayout addressLayout = new LinearLayout(MainActivity.this);
@@ -1205,7 +1207,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         LinearLayout.LayoutParams textViewParams = new LinearLayout.LayoutParams(
                 0, // Width
                 LinearLayout.LayoutParams.WRAP_CONTENT, // Height
-                50f // Weight
+                45f // Weight
         );
         textViewParams.gravity = Gravity.CENTER_VERTICAL; // Center vertically
         textView.setLayoutParams(textViewParams);
@@ -1268,10 +1270,20 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         pathButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showChosenAddressesDialog(timeEditText, chosenAddress);
+                showChosenAddressesDialog(timeEditText, chosenAddress, positionEditText);
             }
         });
 
+        // EditText for manual time input
+        positionEditText.setHint("Enter time"); // Set a hint for the user
+        positionEditText.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
+        LinearLayout.LayoutParams positionEditTextParams = new LinearLayout.LayoutParams(
+                0, // Width
+                LinearLayout.LayoutParams.WRAP_CONTENT, // Height
+                5f // Weight (Initially 0 weight to hide the view)
+        );
+        positionEditText.setLayoutParams(positionEditTextParams);
+        positionEditText.setVisibility(View.GONE); // Initially hide the view
 
         deleteButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -1305,6 +1317,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         addressLayout.addView(deleteButton);
         addressLayout.addView(textView);
         addressLayout.addView(pathButton);
+        addressLayout.addView(positionEditText);
         addressLayout.addView(clockButton);
         addressLayout.addView(timeEditText);
         addressesArray.add(chosenAddressCoordinates);
@@ -1319,7 +1332,7 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
     }
     // Declare AlertDialog as a member variable of your class
     private AlertDialog dialog;
-    private void showChosenAddressesDialog(EditText timeEditText, String chosenAddress) {
+    private void showChosenAddressesDialog(EditText timeEditText, String chosenAddress, EditText positionEditText) {
         Log.d("mainFlow", "start-showChosenAddressesDialog");
         String address = (String) timeEditText.getTag();
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
@@ -1336,6 +1349,11 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
         final List<String> addressesList = new ArrayList<>(chosenAddressesList);
         addressesList.remove(chosenAddress);
         final String[] addressesArray = addressesList.toArray(new String[0]);
+        // Iterate over the array and prepend each member with a number
+        for (int i = 0; i < addressesArray.length; i++) {
+            addressesArray[i] = (i + 1) + ". " + addressesArray[i];
+        }
+
 
         // Find the position of the chosen address in the addressesArray
         for (int i = 0; i < addressesArray.length; i++) {
@@ -1387,6 +1405,14 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String selectedAddress = addressesArray[position];
+                // Set the selected time to the EditText
+                Log.d("mylog", "position: "+position);
+                positionEditText.setText(String.valueOf(position+1));
+                positionEditText.setFocusable(false); // Make timeEditText non-editable
+                positionEditText.setClickable(false); // Make timeEditText non-clickable
+                positionEditText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14); // Adjust text size (you can set your desired size)
+                positionEditText.setVisibility(View.VISIBLE); // Initially hide the view
+
                 // Handle the selected address from the dialog
                 // Perform any necessary actions with the selected address
                 boolean exists = false;
@@ -1451,13 +1477,13 @@ public class MainActivity extends AppCompatActivity implements GetDistanceTask.D
                                 break;
                             }
                         }
-                            if (!exists){
-                                Constraint tempConstraint = new Constraint();
-                                tempConstraint.setAddress(getLatLngFromAddress(MainActivity.this,address));
-                                tempConstraint.setTimeConstraint(constraintTimeInSeconds);
-                                tempConstraint.setAddressString(address);
-                                ConstraintsArray.add(tempConstraint);
-                            }
+                        if (!exists){
+                            Constraint tempConstraint = new Constraint();
+                            tempConstraint.setAddress(getLatLngFromAddress(MainActivity.this,address));
+                            tempConstraint.setTimeConstraint(constraintTimeInSeconds);
+                            tempConstraint.setAddressString(address);
+                            ConstraintsArray.add(tempConstraint);
+                        }
                     }
                 },
                 hour,
